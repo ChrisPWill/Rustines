@@ -1,3 +1,4 @@
+/// The CPU's registers
 struct Regs {
     pc: u16,
     sp: u8,
@@ -7,6 +8,7 @@ struct Regs {
     status: CpuStatus,
 }
 
+/// The CPU status flags (known as the P register)
 struct CpuStatus {
     c: bool,
     z: bool,
@@ -17,6 +19,7 @@ struct CpuStatus {
     n: bool,
 }
 
+/// The CPU structure
 pub struct Cpu {
     regs: Regs,
 }
