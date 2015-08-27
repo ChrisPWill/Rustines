@@ -23,3 +23,31 @@ pub trait Mem<A: Add<A, Output=A> + One + Copy, W: Sized + Copy>
         self.write_word(addr+A::one(), words[1]);
     }
 }
+
+/// A representation of the NES's RAM
+struct Ram {
+    ram: [u8; 0x800],
+}
+
+impl Mem<u16, u8> for Ram {
+    fn read_word(&self, addr: u16) -> u8 
+    {
+        self.ram[addr as usize & 0x7ff]
+    }
+    fn write_word(&mut self, addr: u16, word: u8) 
+    {
+        self.ram[addr as usize & 0x7ff] = word
+    }
+}
+
+impl Ram 
+{
+    fn read_2word_zp(&self, addr: u8) -> [u8; 2] 
+    {
+        self.read_2words(addr as u16)
+    }
+    fn write_2word_zp(&mut self, addr: u8, words: [u8; 2])
+    {
+        self.write_2words(addr as u16, words)
+    }
+}
