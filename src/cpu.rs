@@ -5,11 +5,11 @@ struct Regs {
     a: u8,
     x: u8,
     y: u8,
-    status: CpuStatus,
+    status: Status,
 }
 
 /// The CPU status flags (known as the P register)
-struct CpuStatus {
+struct Status {
     c: bool,
     z: bool,
     i: bool,
