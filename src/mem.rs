@@ -51,3 +51,35 @@ impl Ram
         self.write_2words(addr as u16, words)
     }
 }
+
+/// A map of the NES's various memory structures
+pub struct MappedMem 
+{
+    ram: Ram,
+}
+
+impl Mem<u16, u8> for MappedMem 
+{
+    fn read_word(&self, addr: u16) -> u8
+    {
+        if (addr < 0x200)
+        {
+            self.ram.read_word(addr)
+        }
+        else
+        {
+            panic!("Address out of range.");
+        }
+    }
+    fn write_word(&mut self, addr: u16, word: u8)
+    {
+        if (addr < 0x200)
+        {
+            self.ram.write_word(addr, word);
+        }
+        else
+        {
+            panic!("Address out of range.");
+        }
+    }
+}

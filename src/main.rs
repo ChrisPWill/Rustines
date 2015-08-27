@@ -6,5 +6,6 @@ pub mod mem;
 use cpu::Cpu;
 use mem::Mem;
 
-fn main() {
+fn main()
+{
 }
