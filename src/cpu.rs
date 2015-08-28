@@ -190,7 +190,15 @@ impl Cpu {
 
     // Instructions
     /// ADC - Add With Carry
-    fn inst_adc<A: Accessor>(&mut self, a: A)
+    fn inst_adc<A: Accessor>(&mut self, acc: A)
     {
+        let v = acc.read(self);
+        let sum = self.regs.a as u16 + v as u16 + if (self.regs.status.c) {1} else {0};
+        self.regs.status.c = (sum & 0x100) != 0;
+        let a = self.regs.a;
+        self.regs.status.v = ((a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80);
+        self.regs.a = sum as u8;
+        self.regs.status.z = self.regs.a == 0;
+        self.regs.status.n = (self.regs.a & 0x80) == 0;
     }
 }
