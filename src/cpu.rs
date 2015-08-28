@@ -1,4 +1,4 @@
-use mem::MappedMem;
+use mem::{Mem, MappedMem};
 
 /// The CPU status flags (known as the P register)
 struct Status
@@ -42,4 +42,32 @@ pub struct Cpu
 {
     regs: Regs,
     mapped_mem: MappedMem,
+}
+
+impl Cpu {
+    fn new() -> Cpu
+    {
+        Cpu{ regs: Regs::new(), mapped_mem: MappedMem::new() }
+    }
+    /// Decode an instruction
+    fn decode(&mut self, instruction: u8)
+    {
+        match instruction
+        {
+            _ => panic!("Unknown instruction error.")
+        }
+    }
+    /// Read word at PC and increment PC
+    fn readw_pc(&mut self) -> u8
+    {
+        let word = self.mapped_mem.read_word(self.regs.pc);
+        self.regs.pc += 1;
+        word
+    }
+    /// Fetches next instruction using PC
+    fn step(&mut self)
+    {
+        let instruction = self.readw_pc();
+        self.decode(instruction)
+    }
 }

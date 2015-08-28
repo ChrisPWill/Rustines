@@ -42,6 +42,10 @@ impl Mem<u16, u8> for Ram {
 
 impl Ram 
 {
+    fn new() -> Ram
+    {
+        Ram{ ram: [0x00; 0x800] }
+    }
     fn read_2word_zp(&self, addr: u8) -> [u8; 2] 
     {
         self.read_2words(addr as u16)
@@ -56,6 +60,14 @@ impl Ram
 pub struct MappedMem 
 {
     ram: Ram,
+}
+
+impl MappedMem
+{
+    pub fn new() -> MappedMem
+    {
+        MappedMem{ ram: Ram::new() }
+    }
 }
 
 impl Mem<u16, u8> for MappedMem 
