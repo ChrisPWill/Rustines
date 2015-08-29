@@ -67,7 +67,7 @@ impl Accessor for ImmediateAccessor
     {
         cpu.read_word_pc()
     }
-    fn write(&self, cpu: &mut Cpu, val: u8)
+    fn write(&self, _: &mut Cpu, _: u8)
     {
         panic!("Can't write with ImmediateAccessor.");
     }
@@ -139,6 +139,15 @@ impl Cpu {
             0x16 => {let am = self.am_zeropage_x(); self.inst_asl(am)}
             0x0E => {let am = self.am_absolute();   self.inst_asl(am)}
             0x1E => {let am = self.am_absolute_x(); self.inst_asl(am)}
+
+            // BCC - Branch if Carry Clear
+            // (treat relative addressing mode as immediate)
+            0x90 => {let am = self.am_immediate();  self.inst_bcc(am)}
+
+            // BCS - Branch if Carry Set
+            // (see previous)
+            0xB0 => {let am = self.am_immediate();  self.inst_bcs(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -236,16 +245,22 @@ impl Cpu {
         self.regs.status.n = (val & 0x80) != 0;
         val
     }
+    /// Branches by a displacement value (coded as u8 but considered i8)
+    fn branch(&mut self, displacement: u8)
+    {
+        let dis = displacement as i16 - 128;
+        self.regs.pc = (self.regs.pc as i16 + dis) as u16;
+    }
 
     // Instructions
     /// ADC - Add With Carry
     fn inst_adc<A: Accessor>(&mut self, accessor: A)
     {
         let v = accessor.read(self);
-        let sum = self.regs.a as u16 + v as u16 + if (self.regs.status.c) {1} else {0};
+        let sum = self.regs.a as u16 + v as u16 + if self.regs.status.c {1} else {0};
         self.regs.status.c = (sum & 0x100) != 0;
         let a = self.regs.a;
-        self.regs.status.v = ((a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80);
+        self.regs.status.v = (a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80;
         self.set_a_update_zn(sum as u8);
     }
     /// AND - Logical AND
@@ -261,5 +276,23 @@ impl Cpu {
         let v = accessor.read(self);
         self.regs.status.c = v & 0x80 != 0;
         accessor.write(self, v << 1)
+    }
+    /// BCC - Branch if Carry Clear
+    fn inst_bcc<A: Accessor>(&mut self, accessor: A)
+    {
+        if !self.regs.status.c
+        {
+            let displacement = accessor.read(self);
+            self.branch(displacement);
+        }
+    }
+    /// BCS - Branch if Carry Set
+    fn inst_bcs<A: Accessor>(&mut self, accessor: A)
+    {
+        if self.regs.status.c
+        {
+            let displacement = accessor.read(self);
+            self.branch(displacement);
+        }
     }
 }

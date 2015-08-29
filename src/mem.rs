@@ -74,7 +74,7 @@ impl Mem<u16, u8> for MappedMem
 {
     fn read_word(&self, addr: u16) -> u8
     {
-        if (addr < 0x200)
+        if addr < 0x200
         {
             self.ram.read_word(addr)
         }
@@ -85,7 +85,7 @@ impl Mem<u16, u8> for MappedMem
     }
     fn write_word(&mut self, addr: u16, word: u8)
     {
-        if (addr < 0x200)
+        if addr < 0x200
         {
             self.ram.write_word(addr, word);
         }
