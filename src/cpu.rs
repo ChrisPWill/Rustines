@@ -108,6 +108,16 @@ impl Cpu {
             0x79 => {let am = self.am_absolute_y(); self.inst_adc(am)}
             0x61 => {let am = self.am_indirect_x(); self.inst_adc(am)}
             0x71 => {let am = self.am_indirect_y(); self.inst_adc(am)}
+
+            // AND - Logical AND
+            0x29 => {let am = self.am_immediate();  self.inst_and(am)}
+            0x25 => {let am = self.am_zeropage();   self.inst_and(am)}
+            0x35 => {let am = self.am_zeropage_x(); self.inst_and(am)}
+            0x2D => {let am = self.am_absolute();   self.inst_and(am)}
+            0x3D => {let am = self.am_absolute_x(); self.inst_and(am)}
+            0x39 => {let am = self.am_absolute_y(); self.inst_and(am)}
+            0x21 => {let am = self.am_indirect_x(); self.inst_and(am)}
+            0x31 => {let am = self.am_indirect_y(); self.inst_and(am)}
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -198,6 +208,13 @@ impl Cpu {
         let a = self.regs.a;
         self.regs.status.v = ((a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80);
         self.regs.a = sum as u8;
+        self.regs.status.z = self.regs.a == 0;
+        self.regs.status.n = (self.regs.a & 0x80) == 0;
+    }
+    /// AND - Logical AND
+    fn inst_and<A: Accessor>(&mut self, acc: A)
+    {
+        self.regs.a = self.regs.a & acc.read(self);
         self.regs.status.z = self.regs.a == 0;
         self.regs.status.n = (self.regs.a & 0x80) == 0;
     }
