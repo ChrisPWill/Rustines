@@ -30,44 +30,23 @@ struct Ram {
 }
 
 impl Mem<u16, u8> for Ram {
-    fn read_word(&self, addr: u16) -> u8 
-    {
-        self.ram[addr as usize & 0x7ff]
-    }
-    fn write_word(&mut self, addr: u16, word: u8) 
-    {
-        self.ram[addr as usize & 0x7ff] = word
-    }
+    fn read_word(&self, addr: u16) -> u8 { self.ram[addr as usize & 0x7ff] }
+    fn write_word(&mut self, addr: u16, word: u8) { self.ram[addr as usize & 0x7ff] = word }
 }
 
 impl Ram 
 {
-    fn new() -> Ram
-    {
-        Ram{ ram: [0x00; 0x800] }
-    }
-    fn read_2word_zp(&self, addr: u8) -> [u8; 2] 
-    {
-        self.read_2words(addr as u16)
-    }
-    fn write_2word_zp(&mut self, addr: u8, words: [u8; 2])
-    {
-        self.write_2words(addr as u16, words)
-    }
+    fn new() -> Ram { Ram{ ram: [0x00; 0x800] } }
+    fn read_2word_zp(&self, addr: u8) -> [u8; 2] { self.read_2words(addr as u16) }
+    fn write_2word_zp(&mut self, addr: u8, words: [u8; 2]) { self.write_2words(addr as u16, words) }
 }
 
 /// A map of the NES's various memory structures
-pub struct MappedMem 
-{
-    ram: Ram,
-}
+pub struct MappedMem { ram: Ram }
 
 impl MappedMem
 {
-    pub fn new() -> MappedMem
-    {
-        MappedMem{ ram: Ram::new() }
-    }
+    pub fn new() -> MappedMem { MappedMem{ ram: Ram::new() } }
 }
 
 impl Mem<u16, u8> for MappedMem 

@@ -49,28 +49,16 @@ struct AccumulatorAccessor;
 
 impl Accessor for AccumulatorAccessor
 {
-    fn read(&self, cpu: &mut Cpu) -> u8
-    {
-        cpu.regs.a
-    }
-    fn write(&self, cpu: &mut Cpu, val: u8)
-    {
-        cpu.regs.a = val
-    }
+    fn read(&self, cpu: &mut Cpu) -> u8 { cpu.regs.a }
+    fn write(&self, cpu: &mut Cpu, val: u8) { cpu.regs.a = val }
 }
 
 struct ImmediateAccessor;
 
 impl Accessor for ImmediateAccessor
 {
-    fn read(&self, cpu: &mut Cpu) -> u8
-    {
-        cpu.read_word_pc()
-    }
-    fn write(&self, _: &mut Cpu, _: u8)
-    {
-        panic!("Can't write with ImmediateAccessor.");
-    }
+    fn read(&self, cpu: &mut Cpu) -> u8 { cpu.read_word_pc() }
+    fn write(&self, _: &mut Cpu, _: u8) { panic!("Can't write with ImmediateAccessor."); }
 }
 
 struct MemoryAccessor
@@ -85,14 +73,8 @@ impl MemoryAccessor
 
 impl Accessor for MemoryAccessor
 {
-    fn read(&self, cpu: &mut Cpu) -> u8
-    {
-        cpu.mapped_mem.read_word(self.location)
-    }
-    fn write(&self, cpu: &mut Cpu, val: u8)
-    {
-        cpu.mapped_mem.write_word(self.location, val);
-    }
+    fn read(&self, cpu: &mut Cpu) -> u8 { cpu.mapped_mem.read_word(self.location) }
+    fn write(&self, cpu: &mut Cpu, val: u8) { cpu.mapped_mem.write_word(self.location, val); }
 }
 
 
@@ -157,15 +139,9 @@ impl Cpu {
     }
     // Addressing modes
     /// Accumulator Addressing Mode
-    fn am_accumulator(&mut self) -> AccumulatorAccessor
-    {
-        AccumulatorAccessor
-    }
+    fn am_accumulator(&mut self) -> AccumulatorAccessor { AccumulatorAccessor }
     /// Immediate Addressing Mode
-    fn am_immediate(&mut self) -> ImmediateAccessor
-    {
-        ImmediateAccessor
-    }
+    fn am_immediate(&mut self) -> ImmediateAccessor { ImmediateAccessor }
     /// Zero Page Addressing Mode
     fn am_zeropage(&mut self) -> MemoryAccessor
     {
