@@ -197,6 +197,14 @@ impl Cpu {
         let instruction = self.read_word_pc();
         self.decode(instruction)
     }
+    // Helper functions
+    /// Set accumulator and update Z/N accordingly
+    fn set_a_update_zn(&mut self, a: u8)
+    {
+        self.regs.a = a;
+        self.regs.status.z = self.regs.a == 0;
+        self.regs.status.n = (self.regs.a & 0x80) == 0;
+    }
 
     // Instructions
     /// ADC - Add With Carry
@@ -207,15 +215,11 @@ impl Cpu {
         self.regs.status.c = (sum & 0x100) != 0;
         let a = self.regs.a;
         self.regs.status.v = ((a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80);
-        self.regs.a = sum as u8;
-        self.regs.status.z = self.regs.a == 0;
-        self.regs.status.n = (self.regs.a & 0x80) == 0;
+        self.set_a_update_zn(sum as u8);
     }
     /// AND - Logical AND
     fn inst_and<A: Accessor>(&mut self, acc: A)
     {
-        self.regs.a = self.regs.a & acc.read(self);
-        self.regs.status.z = self.regs.a == 0;
-        self.regs.status.n = (self.regs.a & 0x80) == 0;
+        self.set_a_update_zn(self.regs.a & acc.read(self));
     }
 }
