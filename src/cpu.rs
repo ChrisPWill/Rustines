@@ -25,7 +25,7 @@ struct Regs
 {
     pc: u16, // (PC) Program Counter
     sp: u8,  // (SP) Stack Pointer
-    a: u8,   // (A)  Accucmulator
+    a: u8,   // (A)  Accumulator
     x: u8,   // (X)  Index Register X
     y: u8,   // (Y)  Index Register Y
     status: Status,
@@ -42,7 +42,21 @@ impl Regs
 trait Accessor
 {
     fn read(&self, cpu: &mut Cpu) -> u8;
-    fn write(&mut self, cpu: &mut Cpu, val: u8);
+    fn write(&self, cpu: &mut Cpu, val: u8);
+}
+
+struct AccumulatorAccessor;
+
+impl Accessor for AccumulatorAccessor
+{
+    fn read(&self, cpu: &mut Cpu) -> u8
+    {
+        cpu.regs.a
+    }
+    fn write(&self, cpu: &mut Cpu, val: u8)
+    {
+        cpu.regs.a = val
+    }
 }
 
 struct ImmediateAccessor;
@@ -53,7 +67,7 @@ impl Accessor for ImmediateAccessor
     {
         cpu.read_word_pc()
     }
-    fn write(&mut self, cpu: &mut Cpu, val: u8)
+    fn write(&self, cpu: &mut Cpu, val: u8)
     {
         panic!("Can't write with ImmediateAccessor.");
     }
@@ -75,7 +89,7 @@ impl Accessor for MemoryAccessor
     {
         cpu.mapped_mem.read_word(self.location)
     }
-    fn write(&mut self, cpu: &mut Cpu, val: u8)
+    fn write(&self, cpu: &mut Cpu, val: u8)
     {
         cpu.mapped_mem.write_word(self.location, val);
     }
@@ -118,10 +132,22 @@ impl Cpu {
             0x39 => {let am = self.am_absolute_y(); self.inst_and(am)}
             0x21 => {let am = self.am_indirect_x(); self.inst_and(am)}
             0x31 => {let am = self.am_indirect_y(); self.inst_and(am)}
+
+            // ASL - Arithmetic Shift Left
+            0x0A => {let am = self.am_accumulator();self.inst_asl(am)}
+            0x06 => {let am = self.am_zeropage();   self.inst_asl(am)}
+            0x16 => {let am = self.am_zeropage_x(); self.inst_asl(am)}
+            0x0E => {let am = self.am_absolute();   self.inst_asl(am)}
+            0x1E => {let am = self.am_absolute_x(); self.inst_asl(am)}
             _    => panic!("Unknown instruction error."),
         }
     }
     // Addressing modes
+    /// Accumulator Addressing Mode
+    fn am_accumulator(&mut self) -> AccumulatorAccessor
+    {
+        AccumulatorAccessor
+    }
     /// Immediate Addressing Mode
     fn am_immediate(&mut self) -> ImmediateAccessor
     {
@@ -201,16 +227,21 @@ impl Cpu {
     /// Set accumulator and update Z/N accordingly
     fn set_a_update_zn(&mut self, a: u8)
     {
-        self.regs.a = a;
-        self.regs.status.z = self.regs.a == 0;
-        self.regs.status.n = (self.regs.a & 0x80) == 0;
+        self.regs.a = self.update_zn(a);
+    }
+    /// Echo a value while updating Z/N accordingly
+    fn update_zn(&mut self, val: u8) -> u8
+    {
+        self.regs.status.z = val == 0;
+        self.regs.status.n = (val & 0x80) != 0;
+        val
     }
 
     // Instructions
     /// ADC - Add With Carry
-    fn inst_adc<A: Accessor>(&mut self, acc: A)
+    fn inst_adc<A: Accessor>(&mut self, accessor: A)
     {
-        let v = acc.read(self);
+        let v = accessor.read(self);
         let sum = self.regs.a as u16 + v as u16 + if (self.regs.status.c) {1} else {0};
         self.regs.status.c = (sum & 0x100) != 0;
         let a = self.regs.a;
@@ -218,8 +249,17 @@ impl Cpu {
         self.set_a_update_zn(sum as u8);
     }
     /// AND - Logical AND
-    fn inst_and<A: Accessor>(&mut self, acc: A)
+    fn inst_and<A: Accessor>(&mut self, accessor: A)
     {
-        self.set_a_update_zn(self.regs.a & acc.read(self));
+        let a = self.regs.a;
+        let v = accessor.read(self);
+        self.set_a_update_zn(a & v);
+    }
+    /// ASL - Arithmetic Shift Left
+    fn inst_asl<A: Accessor>(&mut self, accessor: A)
+    {
+        let v = accessor.read(self);
+        self.regs.status.c = v & 0x80 != 0;
+        accessor.write(self, v << 1)
     }
 }
