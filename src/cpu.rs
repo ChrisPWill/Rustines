@@ -148,6 +148,10 @@ impl Cpu {
             // (see previous)
             0xB0 => {let am = self.am_immediate();  self.inst_bcs(am)}
 
+            // BEQ - Branch if Equal
+            // (see previous)
+            0xF0 => {let am = self.am_immediate();  self.inst_beq(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -246,9 +250,9 @@ impl Cpu {
         val
     }
     /// Branches by a displacement value (coded as u8 but considered i8)
-    fn branch(&mut self, displacement: u8)
+    fn branch<A: Accessor>(&mut self, accessor: A)
     {
-        let dis = displacement as i16 - 128;
+        let dis = accessor.read(self) as i16 - 128;
         self.regs.pc = (self.regs.pc as i16 + dis) as u16;
     }
 
@@ -280,19 +284,16 @@ impl Cpu {
     /// BCC - Branch if Carry Clear
     fn inst_bcc<A: Accessor>(&mut self, accessor: A)
     {
-        if !self.regs.status.c
-        {
-            let displacement = accessor.read(self);
-            self.branch(displacement);
-        }
+        if !self.regs.status.c { self.branch(accessor) }
     }
     /// BCS - Branch if Carry Set
     fn inst_bcs<A: Accessor>(&mut self, accessor: A)
     {
-        if self.regs.status.c
-        {
-            let displacement = accessor.read(self);
-            self.branch(displacement);
-        }
+        if self.regs.status.c { self.branch(accessor) }
+    }
+    /// BEQ - Branch if Equal
+    fn inst_beq<A: Accessor>(&mut self, accessor: A)
+    {
+        if self.regs.status.z { self.branch(accessor) }
     }
 }
