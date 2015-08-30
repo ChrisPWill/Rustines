@@ -134,6 +134,10 @@ impl Cpu {
             // (see previous)
             0xF0 => {let am = self.am_immediate();  self.inst_beq(am)}
 
+            // BIT - Bit Test
+            0x24 => {let am = self.am_zeropage();   self.inst_bit(am)}
+            0x2C => {let am = self.am_absolute();   self.inst_bit(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -271,5 +275,13 @@ impl Cpu {
     fn inst_beq<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.z { self.branch(accessor) }
+    }
+    /// BIT - Bit Test
+    fn inst_bit<A: Accessor>(&mut self, accessor: A)
+    {
+        let v = accessor.read(self);
+        let a = self.regs.a;
+        self.set_a_update_zn(a & v);
+        self.regs.status.v = a & 0x40 != 0
     }
 }
