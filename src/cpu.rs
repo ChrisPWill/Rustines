@@ -325,7 +325,15 @@ mod tests
     fn am_zeropage_all()
     {
         let mut cpu = make_cpu(vec![0x02, 0x03, 0x05, 0x07]);
+        cpu.mapped_mem.write_word(0x0002, 0xFA);
+        cpu.mapped_mem.write_word(0x0001, 0xFC);
         let accessor = cpu.am_zeropage();
-        assert_eq!(0x05, accessor.read(&mut cpu));
+        assert_eq!(0xFA, accessor.read(&mut cpu));
+        cpu.regs.x = 0xFE;
+        let accessor = cpu.am_zeropage_x();
+        assert_eq!(0xFC, accessor.read(&mut cpu));
+        cpu.regs.y = 0xFD;
+        let accessor = cpu.am_zeropage_y();
+        assert_eq!(0xFA, accessor.read(&mut cpu));
     }
 }
