@@ -138,7 +138,15 @@ impl Cpu {
             0x24 => {let am = self.am_zeropage();   self.inst_bit(am)}
             0x2C => {let am = self.am_absolute();   self.inst_bit(am)}
 
-            // BEQ - Branch if Equal
+            // BMI - Branch if Minus
+            // (see BCC)
+            0x30 => {let am = self.am_immediate();  self.inst_bmi(am)}
+
+            // BPL - Branch if Positive
+            // (see BCC)
+            0x10 => {let am = self.am_immediate();  self.inst_bpl(am)}
+
+            // BNE - Branch if Not Equal
             // (see BCC)
             0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
 
@@ -297,6 +305,18 @@ impl Cpu {
         self.regs.status.z = a & v == 0;
         self.regs.status.v = v & 0x40 != 0;
         self.regs.status.n = v & 0x80 != 0;
+    }
+    /// BMI - Branch if Minus
+    fn inst_bmi<A: Accessor>(&mut self, accessor: A)
+    {
+        if self.regs.status.n { self.branch(accessor) }
+        else { self.skip1() }
+    }
+    /// BPL - Branch if Positive
+    fn inst_bpl<A: Accessor>(&mut self, accessor: A)
+    {
+        if !self.regs.status.n { self.branch(accessor) }
+        else { self.skip1() }
     }
     /// BNE - Branch if Not Equal
     fn inst_bne<A: Accessor>(&mut self, accessor: A)
@@ -486,7 +506,7 @@ mod tests
     #[test]
     fn test_beq_bne()
     {
-        // BEQ to ASL (skipping AND). Then BNE back to ASL (ignored)
+        // BEQ to ASL (ignored). Then BNE back to ASL
         let mut cpu = make_cpu(vec![0xF0, 0x02, 0x29, 0xF0, 0x0A, 0xD0, 0xFD, 0x29, 0x0F]);
         cpu.regs.status.z = false;
         cpu.regs.a = 0x11;
@@ -516,5 +536,20 @@ mod tests
         assert_eq!(cpu.regs.status.z, true);
         assert_eq!(cpu.regs.status.v, true);
         assert_eq!(cpu.regs.status.n, false);
+    }
+
+    #[test]
+    fn test_bpl_bmi()
+    {
+        // BPL to ASL (skipping AND). Then BMI back to ASL (ignored)
+        let mut cpu = make_cpu(vec![0x10, 0x02, 0x29, 0xF0, 0x0A, 0x30, 0xFE, 0x29, 0x0F]);
+        cpu.regs.status.n = false;
+        cpu.regs.a = 0x11;
+        cpu.step(); // BPL
+        cpu.step(); // ASL
+        assert_eq!(0x22, cpu.regs.a);
+        cpu.step(); // BMI
+        cpu.step(); // AND 0x0F
+        assert_eq!(0x02, cpu.regs.a);
     }
 }
