@@ -259,7 +259,8 @@ impl Cpu {
     {
         let v = accessor.read(self);
         self.regs.status.c = v & 0x80 != 0;
-        accessor.write(self, v << 1)
+        let result = self.update_zn(v << 1);
+        accessor.write(self, result)
     }
     /// BCC - Branch if Carry Clear
     fn inst_bcc<A: Accessor>(&mut self, accessor: A)
@@ -425,6 +426,24 @@ mod tests
     #[test]
     fn test_asl()
     {
+        let mut cpu = make_cpu(vec![0x0A, 0x06, 0x00, 0x06, 0x01]);
+        cpu.regs.a = 0xC1;
+        cpu.step();
+        assert_eq!(0x82, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.c);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.mapped_mem.write_word(0x0000, 0x01);
+        cpu.step();
+        assert_eq!(0x02, cpu.mapped_mem.read_word(0x0000));
+        assert_eq!(false, cpu.regs.status.c);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.mapped_mem.read_word(0x0001));
+        assert_eq!(false, cpu.regs.status.c);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
     }
 
     #[test]
