@@ -138,6 +138,10 @@ impl Cpu {
             0x24 => {let am = self.am_zeropage();   self.inst_bit(am)}
             0x2C => {let am = self.am_absolute();   self.inst_bit(am)}
 
+            // BEQ - Branch if Equal
+            // (see BCC)
+            0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -232,8 +236,13 @@ impl Cpu {
     /// Branches by a displacement value (coded as u8 but considered i8)
     fn branch<A: Accessor>(&mut self, accessor: A)
     {
-        let dis = accessor.read(self) as i16 - 128;
-        self.regs.pc = (self.regs.pc as i16 + dis) as u16;
+        let dis = accessor.read(self) as i8 as i32;
+        self.regs.pc = ((self.regs.pc as i32) + dis) as u16;
+    }
+
+    fn skip1(&mut self)
+    {
+        self.regs.pc += 1;
     }
 
     // Instructions
@@ -266,24 +275,34 @@ impl Cpu {
     fn inst_bcc<A: Accessor>(&mut self, accessor: A)
     {
         if !self.regs.status.c { self.branch(accessor) }
+        else { self.skip1() }
     }
     /// BCS - Branch if Carry Set
     fn inst_bcs<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.c { self.branch(accessor) }
+        else { self.skip1() }
     }
     /// BEQ - Branch if Equal
     fn inst_beq<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.z { self.branch(accessor) }
+        else { self.skip1() }
     }
     /// BIT - Bit Test
     fn inst_bit<A: Accessor>(&mut self, accessor: A)
     {
         let v = accessor.read(self);
         let a = self.regs.a;
-        self.set_a_update_zn(a & v);
-        self.regs.status.v = a & 0x40 != 0
+        self.regs.status.z = a & v == 0;
+        self.regs.status.v = v & 0x40 != 0;
+        self.regs.status.n = v & 0x80 != 0;
+    }
+    /// BNE - Branch if Not Equal
+    fn inst_bne<A: Accessor>(&mut self, accessor: A)
+    {
+        if !self.regs.status.z { self.branch(accessor) }
+        else { self.skip1() }
     }
 }
 
@@ -428,17 +447,20 @@ mod tests
     {
         let mut cpu = make_cpu(vec![0x0A, 0x06, 0x00, 0x06, 0x01]);
         cpu.regs.a = 0xC1;
+
         cpu.step();
         assert_eq!(0x82, cpu.regs.a);
         assert_eq!(true, cpu.regs.status.c);
         assert_eq!(false, cpu.regs.status.z);
         assert_eq!(true, cpu.regs.status.n);
         cpu.mapped_mem.write_word(0x0000, 0x01);
+
         cpu.step();
         assert_eq!(0x02, cpu.mapped_mem.read_word(0x0000));
         assert_eq!(false, cpu.regs.status.c);
         assert_eq!(false, cpu.regs.status.z);
         assert_eq!(false, cpu.regs.status.n);
+
         cpu.step();
         assert_eq!(0x00, cpu.mapped_mem.read_word(0x0001));
         assert_eq!(false, cpu.regs.status.c);
@@ -447,22 +469,52 @@ mod tests
     }
 
     #[test]
-    fn test_bcc()
+    fn test_bcc_bcs()
     {
+        // BCC to ASL (skipping AND). Then BCS back to ASL (ignored)
+        let mut cpu = make_cpu(vec![0x90, 0x02, 0x29, 0xF0, 0x0A, 0xB0, 0xFE, 0x29, 0x0F]);
+        cpu.regs.status.c = false;
+        cpu.regs.a = 0x11;
+        cpu.step(); // BCC
+        cpu.step(); // ASL
+        assert_eq!(0x22, cpu.regs.a);
+        cpu.step(); // BCS
+        cpu.step(); // AND 0x0F
+        assert_eq!(0x02, cpu.regs.a);
     }
 
     #[test]
-    fn test_bcs()
+    fn test_beq_bne()
     {
-    }
-
-    #[test]
-    fn test_beq()
-    {
+        // BEQ to ASL (skipping AND). Then BNE back to ASL (ignored)
+        let mut cpu = make_cpu(vec![0xF0, 0x02, 0x29, 0xF0, 0x0A, 0xD0, 0xFD, 0x29, 0x0F]);
+        cpu.regs.status.z = false;
+        cpu.regs.a = 0x11;
+        cpu.step(); // BEQ
+        cpu.step(); // AND 
+        cpu.step(); // ASL
+        assert_eq!(0x20, cpu.regs.a);
+        cpu.step(); // BNE
+        cpu.step(); // ASL
+        assert_eq!(0x40, cpu.regs.a);
     }
 
     #[test]
     fn test_bit()
     {
+        let mut cpu = make_cpu(vec![0x24, 0xFF, 0x2C, 0x11, 0x11]);
+        cpu.mapped_mem.write_word(0x00FF, 0x80);
+        cpu.mapped_mem.write_word(0x1111, 0x40);
+        cpu.regs.a = 0x80;
+        cpu.step();
+        assert_eq!(cpu.regs.a, 0x80);
+        assert_eq!(cpu.regs.status.z, false);
+        assert_eq!(cpu.regs.status.v, false);
+        assert_eq!(cpu.regs.status.n, true);
+
+        cpu.step();
+        assert_eq!(cpu.regs.status.z, true);
+        assert_eq!(cpu.regs.status.v, true);
+        assert_eq!(cpu.regs.status.n, false);
     }
 }
