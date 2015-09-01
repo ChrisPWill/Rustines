@@ -336,4 +336,21 @@ mod tests
         let accessor = cpu.am_zeropage_y();
         assert_eq!(0xFA, accessor.read(&mut cpu));
     }
+
+    #[test]
+    fn am_absolute_all()
+    {
+        let mut cpu = make_cpu(vec![0x02, 0x01, 0x02, 0x01, 0x02, 0x01]);
+        cpu.mapped_mem.write_word(0x0102, 0xFC);
+        cpu.regs.x = 0x01;
+        cpu.mapped_mem.write_word(0x0103, 0x2D);
+        cpu.regs.y = 0x10;
+        cpu.mapped_mem.write_word(0x0112, 0x3D);
+        let accessor = cpu.am_absolute();
+        assert_eq!(0xFC, accessor.read(&mut cpu));
+        let accessor = cpu.am_absolute_x();
+        assert_eq!(0x2D, accessor.read(&mut cpu));
+        let accessor = cpu.am_absolute_y();
+        assert_eq!(0x3D, accessor.read(&mut cpu));
+    }
 }
