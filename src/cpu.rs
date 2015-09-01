@@ -290,16 +290,42 @@ impl Cpu {
 mod tests
 {
     use super::*;
+    use super::Accessor;
     use mem::{Mem, MappedMem};
 
-    #[test]
-    fn load_game() {
+    fn make_cpu(game_data: Vec<u8>) -> Cpu
+    {
         let mut mapped_mem = MappedMem::new();
-        mapped_mem.load_game(vec![0x01, 0x02, 0x03, 0x04]);
-        let mut cpu = Cpu::new(mapped_mem);
+        mapped_mem.load_game(game_data);
+        Cpu::new(mapped_mem)
+    }
+
+    #[test]
+    fn load_game() 
+    {
+        let mut cpu = make_cpu(vec![0x01, 0x02, 0x03, 0x04]);
         assert_eq!(0x01, cpu.read_word_pc());
         assert_eq!(0x02, cpu.read_word_pc());
         assert_eq!(0x03, cpu.read_word_pc());
         assert_eq!(0x04, cpu.read_word_pc());
+    }
+
+    #[test]
+    fn am_accumulator()
+    {
+        let mut cpu = make_cpu(vec![]);
+        cpu.regs.a = 0xFF;
+        let accessor = cpu.am_accumulator();
+        assert_eq!(0xFF, accessor.read(&mut cpu));
+        accessor.write(&mut cpu, 0x2D);
+        assert_eq!(0x2D, accessor.read(&mut cpu));
+    }
+
+    #[test]
+    fn am_zeropage_all()
+    {
+        let mut cpu = make_cpu(vec![0x02, 0x03, 0x05, 0x07]);
+        let accessor = cpu.am_zeropage();
+        assert_eq!(0x05, accessor.read(&mut cpu));
     }
 }
