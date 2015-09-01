@@ -16,7 +16,7 @@ impl Status
 {
     fn new() -> Status
     {
-        Status { c: true, z: true, i: true, d: true, b: true, v: true, n: true }
+        Status { c: false, z: false, i: false, d: false, b: false, v: false, n: false}
     }
 }
 
@@ -378,5 +378,59 @@ mod tests
         assert_eq!(0x2D, accessor.read(&mut cpu));
         let accessor = cpu.am_indirect_y();
         assert_eq!(0x3D, accessor.read(&mut cpu));
+    }
+
+    fn adc_tester(n1: u8, n2: u8, result: u8, c: bool, z: bool, v: bool, n: bool)
+    {
+        let mut cpu = make_cpu(vec![0x69, n2]);
+        cpu.regs.a = n1;
+        cpu.step();
+        assert_eq!(result, cpu.regs.a);
+        assert_eq!(c, cpu.regs.status.c);
+        assert_eq!(z, cpu.regs.status.z);
+        assert_eq!(v, cpu.regs.status.v);
+        assert_eq!(n, cpu.regs.status.n);
+    }
+    #[test]
+    fn test_adc()
+    {
+        // 0x1F + 0x10 = 0x2F
+        adc_tester(0x1F, 0x10, 0x2F, false, false, false, false);
+        // 0x7F + 0x7F = 0xFE (overflow)
+        adc_tester(0x7F, 0x7F, 0xFE, false, false, true, true);
+        // 0xFE + 0x01 = 0xFF (-2 + 1 = -1)
+        adc_tester(0xFE, 0x01, 0xFF, false, false, false, true);
+        // 0xFE + 0x02 = 0x00 (carry, zero result)
+        adc_tester(0xFE, 0x02, 0x00, true, true, false, false);
+    }
+
+    #[test]
+    fn test_and()
+    {
+    }
+
+    #[test]
+    fn test_asl()
+    {
+    }
+
+    #[test]
+    fn test_bcc()
+    {
+    }
+
+    #[test]
+    fn test_bcs()
+    {
+    }
+
+    #[test]
+    fn test_beq()
+    {
+    }
+
+    #[test]
+    fn test_bit()
+    {
     }
 }
