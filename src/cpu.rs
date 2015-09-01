@@ -353,4 +353,30 @@ mod tests
         let accessor = cpu.am_absolute_y();
         assert_eq!(0x3D, accessor.read(&mut cpu));
     }
+
+    #[test]
+    fn am_indirect_all()
+    {
+        let mut cpu = make_cpu(vec![0x02, 0x11, 0x00, 0x02]);
+        cpu.mapped_mem.write_word(0x1102, 0x00);
+        cpu.mapped_mem.write_word(0x1103, 0x15);
+        cpu.mapped_mem.write_word(0x1500, 0xFC);
+
+        cpu.regs.x = 0x10;
+        cpu.mapped_mem.write_word(0x0010, 0x12);
+        cpu.mapped_mem.write_word(0x0011, 0x10);
+        cpu.mapped_mem.write_word(0x1012, 0x2D);
+
+        cpu.mapped_mem.write_word(0x0002, 0xFF);
+        cpu.mapped_mem.write_word(0x0003, 0x10);
+        cpu.regs.y = 0x01;
+        cpu.mapped_mem.write_word(0x1100, 0x3D);
+
+        let accessor = cpu.am_indirect();
+        assert_eq!(0xFC, accessor.read(&mut cpu));
+        let accessor = cpu.am_indirect_x();
+        assert_eq!(0x2D, accessor.read(&mut cpu));
+        let accessor = cpu.am_indirect_y();
+        assert_eq!(0x3D, accessor.read(&mut cpu));
+    }
 }
