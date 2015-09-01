@@ -404,9 +404,22 @@ mod tests
         adc_tester(0xFE, 0x02, 0x00, true, true, false, false);
     }
 
+    fn and_tester(n1: u8, n2: u8, result: u8, z: bool, n: bool)
+    {
+        let mut cpu = make_cpu(vec![0x29, n2]);
+        cpu.regs.a = n1;
+        cpu.step();
+        assert_eq!(result, cpu.regs.a);
+        assert_eq!(z, cpu.regs.status.z);
+        assert_eq!(n, cpu.regs.status.n);
+    }
+
     #[test]
     fn test_and()
     {
+        and_tester(0x0F, 0x11, 0x01, false, false);
+        and_tester(0xF0, 0x0F, 0x00, true, false);
+        and_tester(0x80, 0xF0, 0x80, false, true);
     }
 
     #[test]
