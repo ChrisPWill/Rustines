@@ -86,9 +86,9 @@ pub struct Cpu
 }
 
 impl Cpu {
-    fn new() -> Cpu
+    fn new(mapped_mem: MappedMem) -> Cpu
     {
-        Cpu{ regs: Regs::new(), mapped_mem: MappedMem::new() }
+        Cpu{ regs: Regs::new(), mapped_mem: mapped_mem }
     }
     /// Decode an instruction
     fn decode(&mut self, instruction: u8)
@@ -283,5 +283,23 @@ impl Cpu {
         let a = self.regs.a;
         self.set_a_update_zn(a & v);
         self.regs.status.v = a & 0x40 != 0
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    use super::*;
+    use mem::{Mem, MappedMem};
+
+    #[test]
+    fn load_game() {
+        let mut mapped_mem = MappedMem::new();
+        mapped_mem.load_game(vec![0x01, 0x02, 0x03, 0x04]);
+        let mut cpu = Cpu::new(mapped_mem);
+        assert_eq!(0x01, cpu.read_word_pc());
+        assert_eq!(0x02, cpu.read_word_pc());
+        assert_eq!(0x03, cpu.read_word_pc());
+        assert_eq!(0x04, cpu.read_word_pc());
     }
 }

@@ -51,7 +51,7 @@ impl MappedMem
 {
     pub fn new() -> MappedMem { MappedMem{ ram: Ram::new(), game: [0x00; 0x2000] } }
 
-    fn load_game(&mut self, data: Vec<u8>)
+    pub fn load_game(&mut self, data: Vec<u8>)
     {
         let mut i = 0;
         for word in data
