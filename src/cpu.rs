@@ -18,6 +18,16 @@ impl Status
     {
         Status { c: false, z: false, i: false, d: false, b: false, v: false, n: false}
     }
+    fn as_byte(&self) -> u8
+    {
+        (if self.n {1 << 7} else {0}) 
+            | (if self.v {1 << 6} else {0}) 
+            | (if self.b {1 << 4} else {0}) 
+            | (if self.d {1 << 3} else {0}) 
+            | (if self.i {1 << 2} else {0}) 
+            | (if self.z {1 << 1} else {0})
+            | (if self.c {1} else {0})
+    }
 }
 
 /// The CPU's registers
@@ -149,6 +159,10 @@ impl Cpu {
             // BNE - Branch if Not Equal
             // (see BCC)
             0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
+
+            // BRK - Force Interrupt
+            // (immediate placeholder for implied am)
+            0x00 => {let am = self.am_immediate();  self.inst_brk(am)}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -323,6 +337,27 @@ impl Cpu {
     {
         if !self.regs.status.z { self.branch(accessor) }
         else { self.skip1() }
+    }
+
+    /// Push a word onto the stack
+    fn push_word(&mut self, word: u8)
+    {
+        self.mapped_mem.write_word(0x100 + self.regs.sp as u16, word);
+        if self.regs.sp <= 0 { self.regs.sp = 0xFF }
+        else { self.regs.sp -= 1 }
+    }
+
+    /// BRK - Force Interrupt
+    fn inst_brk<A: Accessor>(&mut self, _: A)
+    {
+        let pc = self.regs.pc;
+        self.push_word(((pc >> 8) & 0xFF) as u8);
+        self.push_word((pc & 0xFF) as u8);
+        let status = self.regs.status.as_byte();
+        self.push_word(status);
+        let pc = ((self.mapped_mem.read_word(0xFFFF) as u16) << 8) | (self.mapped_mem.read_word(0xFFFE) as u16);
+        self.regs.pc = pc;
+        self.regs.status.b = true;
     }
 }
 
@@ -551,5 +586,28 @@ mod tests
         cpu.step(); // BMI
         cpu.step(); // AND 0x0F
         assert_eq!(0x02, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_brk()
+    {
+        let mut cpu = make_cpu(vec![0x0A, 0x0A, 0x00]);
+        cpu.mapped_mem.write_word(0xFFFE, 0x01);
+        cpu.mapped_mem.write_word(0xFFFF, 0x02);
+        assert_eq!(0xFF, cpu.regs.sp);
+        assert_eq!(0x8000, cpu.regs.pc);
+        assert_eq!(false, cpu.regs.status.b);
+        cpu.step();
+        cpu.step();
+        assert_eq!(0x8002, cpu.regs.pc);
+        let old_status = cpu.regs.status.as_byte();
+        let old_pc = cpu.regs.pc + 0x0001;
+        cpu.step();
+        assert_eq!(0xFC, cpu.regs.sp);
+        assert_eq!(true, cpu.regs.status.b);
+        assert_eq!(((old_pc >> 8) & 0xFF) as u8, cpu.mapped_mem.read_word(0x01FF));
+        assert_eq!((old_pc & 0xFF) as u8, cpu.mapped_mem.read_word(0x01FE));
+        assert_eq!(old_status, cpu.mapped_mem.read_word(0x01FD));
+        assert_eq!(cpu.regs.pc, 0x0201);
     }
 }

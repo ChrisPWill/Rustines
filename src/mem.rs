@@ -44,12 +44,12 @@ impl Ram
 /// A map of the NES's various memory structures
 pub struct MappedMem { 
     ram: Ram,
-    game: [u8; 0x2000]
+    game: [u8; 0x8000]
 }
 
 impl MappedMem
 {
-    pub fn new() -> MappedMem { MappedMem{ ram: Ram::new(), game: [0x00; 0x2000] } }
+    pub fn new() -> MappedMem { MappedMem{ ram: Ram::new(), game: [0x00; 0x8000] } }
 
     pub fn load_game(&mut self, data: Vec<u8>)
     {
@@ -84,6 +84,10 @@ impl Mem<u16, u8> for MappedMem
         if addr < 0x2000
         {
             self.ram.write_word(addr, word);
+        }
+        else if addr >= 0x8000 
+        {
+            self.game[(addr-0x8000) as usize] = word;
         }
         else
         {
