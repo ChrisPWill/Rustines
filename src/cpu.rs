@@ -164,6 +164,24 @@ impl Cpu {
             // (immediate placeholder for implied am)
             0x00 => {let am = self.am_immediate();  self.inst_brk(am)}
 
+            // BVC - Branch if Overflow Clear
+            0x50 => {let am = self.am_immediate();  self.inst_bvc(am)}
+
+            // BVS - Branch is Overflow Set
+            0x70 => {let am = self.am_immediate();  self.inst_bvs(am)}
+
+            // CLC - Clear Carry Flag
+            // (see BRK)
+            0x18 => {let am = self.am_immediate();  self.inst_clc(am)}
+
+            // CLD - Clear Decimal Mode
+            0xD8 => {let am = self.am_immediate();  self.inst_cld(am)}
+            
+            // CLI - Clear Interrupt Disable
+            0x58 => {let am = self.am_immediate();  self.inst_cli(am)}
+            // CLV - Clear Overflow Flag
+            0xB8 => {let am = self.am_immediate();  self.inst_clv(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -358,6 +376,43 @@ impl Cpu {
         let pc = ((self.mapped_mem.read_word(0xFFFF) as u16) << 8) | (self.mapped_mem.read_word(0xFFFE) as u16);
         self.regs.pc = pc;
         self.regs.status.b = true;
+    }
+
+    /// BVC - Branch if Overflow Clear
+    fn inst_bvc<A: Accessor>(&mut self, accessor: A)
+    {
+        if !self.regs.status.v { self.branch(accessor) }
+        else { self.skip1() }
+    }
+    /// BVS - Branch if Overflow Set
+    fn inst_bvs<A: Accessor>(&mut self, accessor: A)
+    {
+        if self.regs.status.v { self.branch(accessor) }
+        else { self.skip1() }
+    }
+
+    /// CLC - Clear Carry Flag
+    fn inst_clc<A: Accessor>(&mut self, _: A)
+    {
+        self.regs.status.c = false;
+    }
+
+    /// CLD - Clear Carry Flag
+    fn inst_cld<A: Accessor>(&mut self, _: A)
+    {
+        self.regs.status.d = false;
+    }
+
+    /// CLI - Clear Carry Flag
+    fn inst_cli<A: Accessor>(&mut self, _: A)
+    {
+        self.regs.status.i = false;
+    }
+
+    /// CLV - Clear Carry Flag
+    fn inst_clv<A: Accessor>(&mut self, _: A)
+    {
+        self.regs.status.v = false;
     }
 }
 
@@ -609,5 +664,38 @@ mod tests
         assert_eq!((old_pc & 0xFF) as u8, cpu.mapped_mem.read_word(0x01FE));
         assert_eq!(old_status, cpu.mapped_mem.read_word(0x01FD));
         assert_eq!(cpu.regs.pc, 0x0201);
+    }
+
+    #[test]
+    fn test_bvc_bvs()
+    {
+        // BVC to ASL (skipping AND). Then BVS back to ASL (ignored)
+        let mut cpu = make_cpu(vec![0x50, 0x02, 0x29, 0xF0, 0x0A, 0x70, 0xFE, 0x29, 0x0F]);
+        cpu.regs.status.v = false;
+        cpu.regs.a = 0x11;
+        cpu.step(); // BCC
+        cpu.step(); // ASL
+        assert_eq!(0x22, cpu.regs.a);
+        cpu.step(); // BCS
+        cpu.step(); // AND 0x0F
+        assert_eq!(0x02, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_clc_cld_cli_clv()
+    {
+        let mut cpu = make_cpu(vec![0x18, 0xD8, 0x58, 0xB8]);
+        cpu.regs.status.c = true;
+        cpu.step();
+        assert_eq!(false, cpu.regs.status.c);
+        cpu.regs.status.d = true;
+        cpu.step();
+        assert_eq!(false, cpu.regs.status.d);
+        cpu.regs.status.i = true;
+        cpu.step();
+        assert_eq!(false, cpu.regs.status.i);
+        cpu.regs.status.v = true;
+        cpu.step();
+        assert_eq!(false, cpu.regs.status.v);
     }
 }
