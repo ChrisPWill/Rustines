@@ -1,4 +1,5 @@
 #![feature(zero_one)]
+#![feature(negate_unsigned)]
 // Disable dead_code and unused_imports after initial development.
 // This is harmless, though, apart from adding bloat/encouraging bad habits
 #![allow(dead_code)]

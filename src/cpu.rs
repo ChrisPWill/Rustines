@@ -1,6 +1,7 @@
 use mem::{Mem, MappedMem};
 
 /// The CPU status flags (known as the P register)
+#[derive(Clone, Copy)]
 struct Status
 {
     c: bool, // (C)  Carry Flag
@@ -181,6 +182,27 @@ impl Cpu {
             0x58 => {let am = self.am_immediate();  self.inst_cli(am)}
             // CLV - Clear Overflow Flag
             0xB8 => {let am = self.am_immediate();  self.inst_clv(am)}
+
+            // CMP - Compare
+            0xC9 => {let am = self.am_immediate();  self.inst_cmp(am)}
+            0xC5 => {let am = self.am_zeropage();   self.inst_cmp(am)}
+            0xD5 => {let am = self.am_zeropage_x(); self.inst_cmp(am)}
+            0xCD => {let am = self.am_absolute();   self.inst_cmp(am)}
+            0xDD => {let am = self.am_absolute_x(); self.inst_cmp(am)}
+            0xD9 => {let am = self.am_absolute_y(); self.inst_cmp(am)}
+            0xC1 => {let am = self.am_indirect_x(); self.inst_cmp(am)}
+            0xD1 => {let am = self.am_indirect_y(); self.inst_cmp(am)}
+            
+            // CPX = Compare X Register
+            0xE0 => {let am = self.am_immediate(); self.inst_cpx(am)}
+            0xE4 => {let am = self.am_zeropage();  self.inst_cpx(am)}
+            0xEC => {let am = self.am_absolute();  self.inst_cpx(am)}
+
+            // CPY = Compare Y Register
+            0xC0 => {let am = self.am_immediate(); self.inst_cpy(am)}
+            0xC4 => {let am = self.am_zeropage();  self.inst_cpy(am)}
+            0xCC => {let am = self.am_absolute();  self.inst_cpy(am)}
+            
 
             _    => panic!("Unknown instruction error."),
         }
@@ -397,22 +419,55 @@ impl Cpu {
         self.regs.status.c = false;
     }
 
-    /// CLD - Clear Carry Flag
+    /// CLD - Clear Decimal Mode
     fn inst_cld<A: Accessor>(&mut self, _: A)
     {
         self.regs.status.d = false;
     }
 
-    /// CLI - Clear Carry Flag
+    /// CLI - Clear Interrupt Disable
     fn inst_cli<A: Accessor>(&mut self, _: A)
     {
         self.regs.status.i = false;
     }
 
-    /// CLV - Clear Carry Flag
+    /// CLV - Clear Overflow Flag
     fn inst_clv<A: Accessor>(&mut self, _: A)
     {
         self.regs.status.v = false;
+    }
+
+    // Shared compare helper
+    fn compare<A: Accessor>(&mut self, accessor: A, val: u8)
+    {
+        let aval = accessor.read(self);
+        let result = (val as u16).wrapping_add(-(aval as u16));
+        let u = (result & 0x0100) != 0; // underflow occurred
+
+        self.regs.status.c = !u;
+        self.regs.status.z = result == 0;
+        self.regs.status.n = result & 0x80 != 0;
+    }
+
+    /// CMP - Compare
+    fn inst_cmp<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = self.regs.a;
+        self.compare(accessor, val)
+    }
+
+    /// CPX - Compare X Register
+    fn inst_cpx<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = self.regs.x;
+        self.compare(accessor, val)
+    }
+
+    /// CPY - Compare Y Register
+    fn inst_cpy<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = self.regs.y;
+        self.compare(accessor, val)
     }
 }
 
@@ -420,7 +475,7 @@ impl Cpu {
 mod tests
 {
     use super::*;
-    use super::Accessor;
+    use super::{Accessor,Status};
     use mem::{Mem, MappedMem};
 
     fn make_cpu(game_data: Vec<u8>) -> Cpu
@@ -697,5 +752,60 @@ mod tests
         cpu.regs.status.v = true;
         cpu.step();
         assert_eq!(false, cpu.regs.status.v);
+    }
+
+    fn cmp_flags(status: Status, c: bool, z: bool, n: bool)
+    {
+        assert_eq!(c, status.c);
+        assert_eq!(z, status.z);
+        assert_eq!(n, status.n);
+    }
+
+    #[test]
+    fn test_cmp()
+    {
+        let mut cpu = make_cpu(vec![0xC5, 0x00, 0xC5, 0x01, 0xC5, 0x02]);
+        cpu.regs.a = 0x80;                       // a    =  128
+        cpu.mapped_mem.write_word(0x0000, 0xFE); // 0x00 =  254
+        cpu.mapped_mem.write_word(0x0001, 0x80); // 0x01 =  128
+        cpu.mapped_mem.write_word(0x0002, 0x02); // 0x02 =  2
+        cpu.step();
+        cmp_flags(cpu.regs.status, false, false, true);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, true, false);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, false, false);
+    }
+
+    #[test]
+    fn test_cpx()
+    {
+        let mut cpu = make_cpu(vec![0xE4, 0x00, 0xE4, 0x01, 0xE4, 0x02]);
+        cpu.regs.x = 0x80;                       // a    =  128
+        cpu.mapped_mem.write_word(0x0000, 0xFE); // 0x00 =  254
+        cpu.mapped_mem.write_word(0x0001, 0x80); // 0x01 =  128
+        cpu.mapped_mem.write_word(0x0002, 0x02); // 0x02 =  2
+        cpu.step();
+        cmp_flags(cpu.regs.status, false, false, true);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, true, false);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, false, false);
+    }
+
+    #[test]
+    fn test_cpy()
+    {
+        let mut cpu = make_cpu(vec![0xC4, 0x00, 0xC4, 0x01, 0xC4, 0x02]);
+        cpu.regs.y = 0x80;                       // a    =  128
+        cpu.mapped_mem.write_word(0x0000, 0xFE); // 0x00 =  254
+        cpu.mapped_mem.write_word(0x0001, 0x80); // 0x01 =  128
+        cpu.mapped_mem.write_word(0x0002, 0x02); // 0x02 =  2
+        cpu.step();
+        cmp_flags(cpu.regs.status, false, false, true);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, true, false);
+        cpu.step();
+        cmp_flags(cpu.regs.status, true, false, false);
     }
 }
