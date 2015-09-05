@@ -193,16 +193,29 @@ impl Cpu {
             0xC1 => {let am = self.am_indirect_x(); self.inst_cmp(am)}
             0xD1 => {let am = self.am_indirect_y(); self.inst_cmp(am)}
             
-            // CPX = Compare X Register
+            // CPX - Compare X Register
             0xE0 => {let am = self.am_immediate(); self.inst_cpx(am)}
             0xE4 => {let am = self.am_zeropage();  self.inst_cpx(am)}
             0xEC => {let am = self.am_absolute();  self.inst_cpx(am)}
 
-            // CPY = Compare Y Register
+            // CPY - Compare Y Register
             0xC0 => {let am = self.am_immediate(); self.inst_cpy(am)}
             0xC4 => {let am = self.am_zeropage();  self.inst_cpy(am)}
             0xCC => {let am = self.am_absolute();  self.inst_cpy(am)}
             
+            // DEC - Decrement Memory
+            0xC6 => {let am = self.am_zeropage();  self.inst_dec(am)}
+            0xD6 => {let am = self.am_zeropage_x();self.inst_dec(am)}
+            0xCE => {let am = self.am_absolute();  self.inst_dec(am)}
+            0xDE => {let am = self.am_absolute_x();self.inst_dec(am)}
+
+            // DEX - Decrement X Register
+            // (see BRK)
+            0xCA => {let am = self.am_immediate(); self.inst_dex(am)}
+
+            // DEY - Decrement Y Register
+            // (see BRK)
+            0x88 => {let am = self.am_immediate(); self.inst_dey(am)}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -468,6 +481,30 @@ impl Cpu {
     {
         let val = self.regs.y;
         self.compare(accessor, val)
+    }
+
+    /// DEC - Decrement Memory
+    fn inst_dec<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        let result = self.update_zn(val.wrapping_add(-1));
+        accessor.write(self, result);
+    }
+
+    /// DEX - Decrement X Register
+    fn inst_dex<A: Accessor>(&mut self, _: A)
+    {
+        let x = self.regs.x;
+        let result = self.update_zn(x.wrapping_add(-1));
+        self.regs.x = result;
+    }
+
+    /// DEY - Decrement Y Register
+    fn inst_dey<A: Accessor>(&mut self, _: A)
+    {
+        let y = self.regs.y;
+        let result = self.update_zn(y.wrapping_add(-1));
+        self.regs.y = result;
     }
 }
 
@@ -807,5 +844,26 @@ mod tests
         cmp_flags(cpu.regs.status, true, true, false);
         cpu.step();
         cmp_flags(cpu.regs.status, true, false, false);
+    }
+
+    #[test]
+    fn test_dec_dex_dey()
+    {
+        let mut cpu = make_cpu(vec![0xC6, 0x00, 0xCA, 0x88]);
+        cpu.mapped_mem.write_word(0x0000, 0x70);
+        cpu.regs.x = 0x01;
+        cpu.regs.y = 0x00;
+        cpu.step();
+        assert_eq!(0x6F, cpu.mapped_mem.read_word(0x0000));
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.x);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0xFF, cpu.regs.y);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
     }
 }
