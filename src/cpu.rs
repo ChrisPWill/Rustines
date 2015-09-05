@@ -227,6 +227,20 @@ impl Cpu {
             0x41 => {let am = self.am_indirect_x(); self.inst_eor(am)}
             0x51 => {let am = self.am_indirect_y(); self.inst_eor(am)}
 
+            // INC - Increment Memory
+            0xE6 => {let am = self.am_zeropage();   self.inst_inc(am)}
+            0xF6 => {let am = self.am_zeropage_x(); self.inst_inc(am)}
+            0xEE => {let am = self.am_absolute();   self.inst_inc(am)}
+            0xFE => {let am = self.am_absolute_x(); self.inst_inc(am)}
+
+            // INX - Increment X Register
+            // (see BRK)
+            0xE8 => {let am = self.am_immediate();  self.inst_inx(am)}
+
+            // INY - Increment Y Register
+            // (see BRK)
+            0xC8 => {let am = self.am_immediate();  self.inst_iny(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -525,6 +539,31 @@ impl Cpu {
         let result = self.update_zn(a ^ val);
         self.regs.a = result;
     }
+
+    /// INC - Increment Memory
+    fn inst_inc<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        let result = self.update_zn(val.wrapping_add(1));
+        accessor.write(self, result);
+    }
+
+    /// INX - Increment X Register
+    fn inst_inx<A: Accessor>(&mut self, _: A)
+    {
+        let x = self.regs.x;
+        let result = self.update_zn(x.wrapping_add(1));
+        self.regs.x = result;
+    }
+
+    /// INY - Increment Y Register
+    fn inst_iny<A: Accessor>(&mut self, _: A)
+    {
+        let y = self.regs.y;
+        let result = self.update_zn(y.wrapping_add(1));
+        self.regs.y = result;
+    }
+
 }
 
 #[cfg(test)]
@@ -902,4 +941,26 @@ mod tests
         assert_eq!(0x00, cpu.regs.a);
 
     }
+
+    #[test]
+    fn test_inc_inx_iny()
+    {
+        let mut cpu = make_cpu(vec![0xE6, 0x00, 0xE8, 0xC8]);
+        cpu.mapped_mem.write_word(0x0000, 0x70);
+        cpu.regs.x = 0xFF;
+        cpu.regs.y = 0x7F;
+        cpu.step();
+        assert_eq!(0x71, cpu.mapped_mem.read_word(0x0000));
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.x);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x80, cpu.regs.y);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+    }
+
 }
