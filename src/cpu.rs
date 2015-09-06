@@ -245,6 +245,12 @@ impl Cpu {
             // (see JMP doc for unique function format)
             0x4C => {                               self.inst_jmp(true)}
             0x6C => {                               self.inst_jmp(false)}
+            
+            // JSR - Jump to Subroutine
+            0x20 => {                               self.inst_jsr()}
+
+            // RTS - Return from Subroutine
+            0x60 => {                               self.inst_rts()}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -429,6 +435,14 @@ impl Cpu {
         else { self.regs.sp -= 1 }
     }
 
+    /// Pop a word from the stack
+    fn pop_word(&mut self) -> u8
+    {
+        let word = self.mapped_mem.read_word(0x100 + self.regs.sp as u16 + 1);
+        self.regs.sp = self.regs.sp.wrapping_add(1);
+        word
+    }
+
     /// BRK - Force Interrupt
     fn inst_brk<A: Accessor>(&mut self, _: A)
     {
@@ -588,6 +602,29 @@ impl Cpu {
         }
     }
 
+    /// JSR - Jump to Subroutine
+    fn inst_jsr(&mut self)
+    {
+        // Get the subroutine address
+        let address = self.read_2words_pc();
+
+        // Save the return point
+        let pc = self.regs.pc - 1;
+        self.push_word(((pc >> 8) & 0xFF) as u8);
+        self.push_word((pc & 0xFF) as u8);
+
+        // Go to subroutine
+        self.regs.pc = address;
+    }
+
+    /// RTS - Return from Subroutine
+    fn inst_rts(&mut self)
+    {
+        let lb = self.pop_word();
+        let hb = self.pop_word();
+        let pc = (hb as u16) << 8 | lb as u16;
+        self.regs.pc = pc + 1;
+    }
 }
 
 #[cfg(test)]
@@ -1001,5 +1038,18 @@ mod tests
         assert_eq!(0x8003, cpu.regs.pc);
         cpu.step();
         assert_eq!(0x02, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_jsr_rts()
+    {
+        let mut cpu = make_cpu(vec![0x20, 0x10, 0x8F, 0x0A]);
+        cpu.mapped_mem.write_word(0x8F10, 0x60);
+        cpu.step();
+        assert_eq!(0x8F10, cpu.regs.pc);
+        assert_eq!(0x80, cpu.mapped_mem.read_word(0x01FF));
+        assert_eq!(0x02, cpu.mapped_mem.read_word(0x01FE));
+        cpu.step();
+        assert_eq!(0x8003, cpu.regs.pc);
     }
 }
