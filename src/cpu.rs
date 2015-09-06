@@ -252,6 +252,31 @@ impl Cpu {
             // RTS - Return from Subroutine
             0x60 => {                               self.inst_rts()}
 
+            // LDA - Load Accmulator
+            0xA9 => {let am = self.am_immediate();  self.inst_lda(am)}
+            0xA5 => {let am = self.am_zeropage();   self.inst_lda(am)}
+            0xB5 => {let am = self.am_zeropage_x(); self.inst_lda(am)}
+            0xAD => {let am = self.am_absolute();   self.inst_lda(am)}
+            0xBD => {let am = self.am_absolute_x(); self.inst_lda(am)}
+            0xB9 => {let am = self.am_absolute_y(); self.inst_lda(am)}
+            0xA1 => {let am = self.am_indirect_x(); self.inst_lda(am)}
+            0xB1 => {let am = self.am_indirect_y(); self.inst_lda(am)}
+
+            // LDX - Load X Register
+            0xA2 => {let am = self.am_immediate();  self.inst_ldx(am)}
+            0xA6 => {let am = self.am_zeropage();   self.inst_ldx(am)}
+            0xB6 => {let am = self.am_zeropage_y(); self.inst_ldx(am)}
+            0xAE => {let am = self.am_absolute();   self.inst_ldx(am)}
+            0xBE => {let am = self.am_absolute_y(); self.inst_ldx(am)}
+
+            // LDY - Load Y Register
+            0xA0 => {let am = self.am_immediate();  self.inst_ldy(am)}
+            0xA4 => {let am = self.am_zeropage();   self.inst_ldy(am)}
+            0xB4 => {let am = self.am_zeropage_x(); self.inst_ldy(am)}
+            0xAC => {let am = self.am_absolute();   self.inst_ldy(am)}
+            0xBC => {let am = self.am_absolute_x(); self.inst_ldy(am)}
+
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -624,6 +649,24 @@ impl Cpu {
         let hb = self.pop_word();
         let pc = (hb as u16) << 8 | lb as u16;
         self.regs.pc = pc + 1;
+    }
+    /// LDA - Load Accmulator
+    fn inst_lda<A: Accessor>(&mut self, accessor: A)
+    {
+        let a = accessor.read(self);
+        self.regs.a = self.update_zn(a);
+    }
+    /// LDX - Load X Register
+    fn inst_ldx<A: Accessor>(&mut self, accessor: A)
+    {
+        let x = accessor.read(self);
+        self.regs.x = self.update_zn(x);
+    }
+    /// LDY - Load Y Register
+    fn inst_ldy<A: Accessor>(&mut self, accessor: A)
+    {
+        let y = accessor.read(self);
+        self.regs.y = self.update_zn(y);
     }
 }
 
@@ -1052,4 +1095,48 @@ mod tests
         cpu.step();
         assert_eq!(0x8003, cpu.regs.pc);
     }
+
+    #[test]
+    fn test_lda()
+    {
+        let mut cpu = make_cpu(vec![0xA9, 0xFA, 0xA9, 0x00]);
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.a);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+    }
+
+    #[test]
+    fn test_ldx()
+    {
+        let mut cpu = make_cpu(vec![0xA2, 0xFA, 0xA2, 0x00]);
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.x);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.x);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+    }
+
+    #[test]
+    fn test_ldy()
+    {
+        let mut cpu = make_cpu(vec![0xA0, 0xFA, 0xA0, 0x00]);
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.y);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.y);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+    }
+
+
 }
