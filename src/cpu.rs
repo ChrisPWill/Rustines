@@ -241,6 +241,11 @@ impl Cpu {
             // (see BRK)
             0xC8 => {let am = self.am_immediate();  self.inst_iny(am)}
 
+            // JMP - Jump
+            // (see JMP doc for unique function format)
+            0x4C => {                               self.inst_jmp(true)}
+            0x6C => {                               self.inst_jmp(false)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -562,6 +567,25 @@ impl Cpu {
         let y = self.regs.y;
         let result = self.update_zn(y.wrapping_add(1));
         self.regs.y = result;
+    }
+
+    /// JMP - Jump
+    /// JMP reads an address either using an absolute or indirect addressing
+    /// mode. A value of true for `absolute` triggers the absolute mode while
+    /// false triggers the indirect mode.
+    fn inst_jmp(&mut self, absolute: bool)
+    {
+        if absolute
+        {
+            let address = self.read_2words_pc();
+            self.regs.pc = address;
+        }
+        else
+        {
+            let i_addr = self.read_2words_pc();
+            let addr = self.mapped_mem.read_2words(i_addr);
+            self.regs.pc = ((addr[1] as u16) << 8) | (addr[0] as u16);
+        }
     }
 
 }
@@ -963,4 +987,19 @@ mod tests
         assert_eq!(true, cpu.regs.status.n);
     }
 
+    #[test]
+    fn test_jmp()
+    {
+        let mut cpu = make_cpu(vec![0x4C, 0x10, 0x8F, 0x0A, 0x03, 0x80]);
+        cpu.regs.a = 0x01;
+        cpu.mapped_mem.write_word(0x8F10, 0x6C);
+        cpu.mapped_mem.write_word(0x8F11, 0x04);
+        cpu.mapped_mem.write_word(0x8F12, 0x80);
+        cpu.step();
+        assert_eq!(0x8F10, cpu.regs.pc);
+        cpu.step();
+        assert_eq!(0x8003, cpu.regs.pc);
+        cpu.step();
+        assert_eq!(0x02, cpu.regs.a);
+    }
 }
