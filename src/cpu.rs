@@ -327,6 +327,7 @@ impl Cpu {
             0x6E => {let am = self.am_absolute();   self.inst_ror(am)}
             0x7E => {let am = self.am_absolute_x(); self.inst_ror(am)}
             
+            0x40 => {                               self.inst_rti()}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -788,6 +789,15 @@ impl Cpu {
         accessor.write(self, val >> 1 | b7);
     }
     
+    /// RTI - Return from Interrupt
+    fn inst_rti(&mut self)
+    {
+        let status_byte = self.pop_word();
+        self.regs.status.load_byte(status_byte);
+        let pc_l = self.pop_word();
+        let pc_h = self.pop_word();
+        self.regs.pc = (pc_h as u16) << 8 | pc_l as u16;
+    }
 }
 
 #[cfg(test)]
@@ -1334,5 +1344,23 @@ mod tests
         cpu.step();
         assert_eq!(0x40, cpu.regs.a);
         assert_eq!(true, cpu.regs.status.c);
+    }
+
+    #[test]
+    fn test_rti()
+    {
+        let mut cpu = make_cpu(vec![0x0A, 0x00]);
+        cpu.mapped_mem.write_word(0xFFFE, 0x02);
+        cpu.mapped_mem.write_word(0xFFFF, 0x85);
+        cpu.mapped_mem.write_word(0x8502, 0x40);
+        cpu.regs.a = 0x80;
+        cpu.step(); // a = 0x80 << 1 == 0x00, z = false -> true
+        assert_eq!(true, cpu.regs.status.z);
+        let return_point = cpu.regs.pc + 1;
+        cpu.step(); // BRK, push status to stack
+        cpu.regs.status.z = false; // change z status
+        cpu.step(); // RTI, get old status and PC
+        assert_eq!(return_point, cpu.regs.pc);
+        assert_eq!(true, cpu.regs.status.z); // should return to previous value
     }
 }
