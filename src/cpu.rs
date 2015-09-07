@@ -29,6 +29,16 @@ impl Status
             | (if self.z {1 << 1} else {0})
             | (if self.c {1} else {0})
     }
+    fn load_byte(&mut self, status_byte: u8)
+    {
+        self.n = if status_byte & 0x80 != 0 {true} else {false};
+        self.v = if status_byte & 0x40 != 0 {true} else {false};
+        self.b = if status_byte & 0x10 != 0 {true} else {false};
+        self.d = if status_byte & 0x08 != 0 {true} else {false};
+        self.i = if status_byte & 0x04 != 0 {true} else {false};
+        self.z = if status_byte & 0x02 != 0 {true} else {false};
+        self.c = if status_byte & 0x01 != 0 {true} else {false};
+    }
 }
 
 /// The CPU's registers
@@ -162,8 +172,7 @@ impl Cpu {
             0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
 
             // BRK - Force Interrupt
-            // (immediate placeholder for implied am)
-            0x00 => {let am = self.am_immediate();  self.inst_brk(am)}
+            0x00 => {                               self.inst_brk()}
 
             // BVC - Branch if Overflow Clear
             0x50 => {let am = self.am_immediate();  self.inst_bvc(am)}
@@ -172,16 +181,16 @@ impl Cpu {
             0x70 => {let am = self.am_immediate();  self.inst_bvs(am)}
 
             // CLC - Clear Carry Flag
-            // (see BRK)
-            0x18 => {let am = self.am_immediate();  self.inst_clc(am)}
+            0x18 => {                               self.inst_clc()}
 
             // CLD - Clear Decimal Mode
-            0xD8 => {let am = self.am_immediate();  self.inst_cld(am)}
+            0xD8 => {                               self.inst_cld()}
             
             // CLI - Clear Interrupt Disable
-            0x58 => {let am = self.am_immediate();  self.inst_cli(am)}
+            0x58 => {                               self.inst_cli()}
+
             // CLV - Clear Overflow Flag
-            0xB8 => {let am = self.am_immediate();  self.inst_clv(am)}
+            0xB8 => {                               self.inst_clv()}
 
             // CMP - Compare
             0xC9 => {let am = self.am_immediate();  self.inst_cmp(am)}
@@ -210,12 +219,10 @@ impl Cpu {
             0xDE => {let am = self.am_absolute_x(); self.inst_dec(am)}
 
             // DEX - Decrement X Register
-            // (see BRK)
-            0xCA => {let am = self.am_immediate();  self.inst_dex(am)}
+            0xCA => {                               self.inst_dex()}
 
             // DEY - Decrement Y Register
-            // (see BRK)
-            0x88 => {let am = self.am_immediate();  self.inst_dey(am)}
+            0x88 => {                               self.inst_dey()}
 
             // EOR - Exclusive OR
             0x49 => {let am = self.am_immediate();  self.inst_eor(am)}
@@ -234,12 +241,10 @@ impl Cpu {
             0xFE => {let am = self.am_absolute_x(); self.inst_inc(am)}
 
             // INX - Increment X Register
-            // (see BRK)
-            0xE8 => {let am = self.am_immediate();  self.inst_inx(am)}
+            0xE8 => {                               self.inst_inx()}
 
             // INY - Increment Y Register
-            // (see BRK)
-            0xC8 => {let am = self.am_immediate();  self.inst_iny(am)}
+            0xC8 => {                               self.inst_iny()}
 
             // JMP - Jump
             // (see JMP doc for unique function format)
@@ -295,6 +300,33 @@ impl Cpu {
             0x19 => {let am = self.am_absolute_y(); self.inst_ora(am)}
             0x01 => {let am = self.am_indirect_x(); self.inst_ora(am)}
             0x11 => {let am = self.am_indirect_y(); self.inst_ora(am)}
+
+            // PHA - Push Accumulator
+            0x48 => {                               self.inst_pha()}
+
+            // PHP - Push Processor Status
+            0x08 => {                               self.inst_php()}
+
+            // PLA - Pull Accumulator
+            0x68 => {                               self.inst_pla()}
+            
+            // PLP - Pull Processor Status
+            0x28 => {                               self.inst_plp()}
+
+            // ROL - Rotate Left
+            0x2A => {let am = self.am_accumulator();self.inst_rol(am)}
+            0x26 => {let am = self.am_zeropage();   self.inst_rol(am)}
+            0x36 => {let am = self.am_zeropage_x(); self.inst_rol(am)}
+            0x2E => {let am = self.am_absolute();   self.inst_rol(am)}
+            0x3E => {let am = self.am_absolute_x(); self.inst_rol(am)}
+            
+            // ROR - Rotate Right
+            0x6A => {let am = self.am_accumulator();self.inst_ror(am)}
+            0x66 => {let am = self.am_zeropage();   self.inst_ror(am)}
+            0x76 => {let am = self.am_zeropage_x(); self.inst_ror(am)}
+            0x6E => {let am = self.am_absolute();   self.inst_ror(am)}
+            0x7E => {let am = self.am_absolute_x(); self.inst_ror(am)}
+            
 
             _    => panic!("Unknown instruction error."),
         }
@@ -488,7 +520,7 @@ impl Cpu {
     }
 
     /// BRK - Force Interrupt
-    fn inst_brk<A: Accessor>(&mut self, _: A)
+    fn inst_brk(&mut self)
     {
         let pc = self.regs.pc;
         self.push_word(((pc >> 8) & 0xFF) as u8);
@@ -514,25 +546,25 @@ impl Cpu {
     }
 
     /// CLC - Clear Carry Flag
-    fn inst_clc<A: Accessor>(&mut self, _: A)
+    fn inst_clc(&mut self)
     {
         self.regs.status.c = false;
     }
 
     /// CLD - Clear Decimal Mode
-    fn inst_cld<A: Accessor>(&mut self, _: A)
+    fn inst_cld(&mut self)
     {
         self.regs.status.d = false;
     }
 
     /// CLI - Clear Interrupt Disable
-    fn inst_cli<A: Accessor>(&mut self, _: A)
+    fn inst_cli(&mut self)
     {
         self.regs.status.i = false;
     }
 
     /// CLV - Clear Overflow Flag
-    fn inst_clv<A: Accessor>(&mut self, _: A)
+    fn inst_clv(&mut self)
     {
         self.regs.status.v = false;
     }
@@ -579,7 +611,7 @@ impl Cpu {
     }
 
     /// DEX - Decrement X Register
-    fn inst_dex<A: Accessor>(&mut self, _: A)
+    fn inst_dex(&mut self)
     {
         let x = self.regs.x;
         let result = self.update_zn(x.wrapping_add(-1));
@@ -587,7 +619,7 @@ impl Cpu {
     }
 
     /// DEY - Decrement Y Register
-    fn inst_dey<A: Accessor>(&mut self, _: A)
+    fn inst_dey(&mut self)
     {
         let y = self.regs.y;
         let result = self.update_zn(y.wrapping_add(-1));
@@ -612,7 +644,7 @@ impl Cpu {
     }
 
     /// INX - Increment X Register
-    fn inst_inx<A: Accessor>(&mut self, _: A)
+    fn inst_inx(&mut self)
     {
         let x = self.regs.x;
         let result = self.update_zn(x.wrapping_add(1));
@@ -620,7 +652,7 @@ impl Cpu {
     }
 
     /// INY - Increment Y Register
-    fn inst_iny<A: Accessor>(&mut self, _: A)
+    fn inst_iny(&mut self)
     {
         let y = self.regs.y;
         let result = self.update_zn(y.wrapping_add(1));
@@ -708,6 +740,54 @@ impl Cpu {
         let result = self.update_zn(a | val);
         self.regs.a = result;
     }
+
+    /// PHA - Push Accumulator
+    fn inst_pha(&mut self)
+    {
+        let a = self.regs.a;
+        self.push_word(a);
+    }
+
+    /// PHP - Push Processor Status
+    fn inst_php(&mut self)
+    {
+        let status = self.regs.status.as_byte();
+        self.push_word(status);
+    }
+
+    /// PLA - Pull Accumulator
+    fn inst_pla(&mut self)
+    {
+        let a = self.pop_word();
+        self.update_zn(a);
+        self.regs.a = a;
+    }
+
+    /// PLP - Pull Processor Status
+    fn inst_plp(&mut self)
+    {
+        let status = self.pop_word();
+        self.regs.status.load_byte(status);
+    }
+
+    /// ROL - Rotate Left
+    fn inst_rol<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        let b0 = if self.regs.status.c {1} else {0};
+        self.regs.status.c = val & 0x80 != 0;
+        accessor.write(self, val << 1 | b0);
+    }
+
+    /// ROR - Rotate Right
+    fn inst_ror<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        let b7 = if self.regs.status.c {1} else {0} << 7;
+        self.regs.status.c = val & 0x01 != 0;
+        accessor.write(self, val >> 1 | b7);
+    }
+    
 }
 
 #[cfg(test)]
@@ -1195,5 +1275,64 @@ mod tests
         cpu.regs.a = 0x10;
         cpu.step();
         assert_eq!(0x11, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_pha()
+    {
+        let mut cpu = make_cpu(vec![0x48]);
+        cpu.regs.a = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.mapped_mem.read_word(0x01FF));
+    }
+
+    #[test]
+    fn test_php()
+    {
+        let mut cpu = make_cpu(vec![0x08]);
+        cpu.regs.status.z = true;
+        cpu.regs.status.c = true;
+        let status = cpu.regs.status;
+        cpu.step();
+        assert_eq!(status.as_byte(), cpu.mapped_mem.read_word(0x01FF));
+    }
+
+    #[test]
+    fn test_pla()
+    {
+        let mut cpu = make_cpu(vec![0x68]);
+        cpu.mapped_mem.write_word(0x01FF, 0xFA);
+        cpu.regs.sp -= 1;
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_plp()
+    {
+        let mut cpu = make_cpu(vec![0x28]);
+        let mut status = Status::new();
+        status.c = true;
+        status.v = true;
+        cpu.mapped_mem.write_word(0x01FF, status.as_byte());
+        cpu.regs.sp -= 1;
+        cpu.step();
+        assert_eq!(status.as_byte(), cpu.regs.status.as_byte());
+    }
+
+    #[test]
+    fn test_rol_ror()
+    {
+        let mut cpu = make_cpu(vec![0x2A, 0x6A, 0x6A]);
+        cpu.regs.a = 0x81;
+        cpu.step();
+        assert_eq!(0x02, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.c);
+        cpu.step();
+        assert_eq!(0x81, cpu.regs.a);
+        assert_eq!(false, cpu.regs.status.c);
+        cpu.step();
+        assert_eq!(0x40, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.c);
     }
 }
