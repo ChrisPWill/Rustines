@@ -283,6 +283,19 @@ impl Cpu {
             0x4E => {let am = self.am_absolute();   self.inst_lsr(am)}
             0x5E => {let am = self.am_absolute_x(); self.inst_lsr(am)}
 
+            // NOP - No Operation
+            0xEA => { ; }
+
+            // ORA - Logical Inclusive OR
+            0x09 => {let am = self.am_immediate();  self.inst_ora(am)}
+            0x05 => {let am = self.am_zeropage();   self.inst_ora(am)}
+            0x15 => {let am = self.am_zeropage_x(); self.inst_ora(am)}
+            0x0D => {let am = self.am_absolute();   self.inst_ora(am)}
+            0x1D => {let am = self.am_absolute_x(); self.inst_ora(am)}
+            0x19 => {let am = self.am_absolute_y(); self.inst_ora(am)}
+            0x01 => {let am = self.am_indirect_x(); self.inst_ora(am)}
+            0x11 => {let am = self.am_indirect_y(); self.inst_ora(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -656,24 +669,28 @@ impl Cpu {
         let pc = (hb as u16) << 8 | lb as u16;
         self.regs.pc = pc + 1;
     }
+
     /// LDA - Load Accmulator
     fn inst_lda<A: Accessor>(&mut self, accessor: A)
     {
         let a = accessor.read(self);
         self.regs.a = self.update_zn(a);
     }
+
     /// LDX - Load X Register
     fn inst_ldx<A: Accessor>(&mut self, accessor: A)
     {
         let x = accessor.read(self);
         self.regs.x = self.update_zn(x);
     }
+
     /// LDY - Load Y Register
     fn inst_ldy<A: Accessor>(&mut self, accessor: A)
     {
         let y = accessor.read(self);
         self.regs.y = self.update_zn(y);
     }
+
     /// LSR - Logical Shift Right
     fn inst_lsr<A: Accessor>(&mut self, accessor: A)
     {
@@ -681,6 +698,15 @@ impl Cpu {
         self.regs.status.c = val & 0x01 != 0;
         let result = self.update_zn(val >> 1);
         accessor.write(self, result);
+    }
+
+    /// ORA - Logical Inclusive OR
+    fn inst_ora<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        let a = self.regs.a;
+        let result = self.update_zn(a | val);
+        self.regs.a = result;
     }
 }
 
@@ -1162,4 +1188,12 @@ mod tests
         assert_eq!(true, cpu.regs.status.c);
     }
 
+    #[test]
+    fn test_ora()
+    {
+        let mut cpu = make_cpu(vec![0x09, 0x01]);
+        cpu.regs.a = 0x10;
+        cpu.step();
+        assert_eq!(0x11, cpu.regs.a);
+    }
 }
