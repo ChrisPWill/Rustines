@@ -276,6 +276,12 @@ impl Cpu {
             0xAC => {let am = self.am_absolute();   self.inst_ldy(am)}
             0xBC => {let am = self.am_absolute_x(); self.inst_ldy(am)}
 
+            // LSR - Logical Shift Right
+            0x4A => {let am = self.am_accumulator();self.inst_lsr(am)}
+            0x46 => {let am = self.am_zeropage();   self.inst_lsr(am)}
+            0x56 => {let am = self.am_zeropage_x(); self.inst_lsr(am)}
+            0x4E => {let am = self.am_absolute();   self.inst_lsr(am)}
+            0x5E => {let am = self.am_absolute_x(); self.inst_lsr(am)}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -667,6 +673,14 @@ impl Cpu {
     {
         let y = accessor.read(self);
         self.regs.y = self.update_zn(y);
+    }
+    /// LSR - Logical Shift Right
+    fn inst_lsr<A: Accessor>(&mut self, accessor: A)
+    {
+        let val = accessor.read(self);
+        self.regs.status.c = val & 0x01 != 0;
+        let result = self.update_zn(val >> 1);
+        accessor.write(self, result);
     }
 }
 
@@ -1138,5 +1152,14 @@ mod tests
         assert_eq!(false, cpu.regs.status.n);
     }
 
+    #[test]
+    fn test_lsr()
+    {
+        let mut cpu = make_cpu(vec![0x4A]);
+        cpu.regs.a = 0x03;
+        cpu.step();
+        assert_eq!(0x01, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.c);
+    }
 
 }
