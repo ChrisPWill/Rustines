@@ -349,6 +349,25 @@ impl Cpu {
             // SEI - Set Interrupt Disable
             0x78 => {                               self.inst_sei()}
 
+            // STA - Store Accumulator
+            0x85 => {let am = self.am_zeropage();   self.inst_sta(am)}
+            0x95 => {let am = self.am_zeropage_x(); self.inst_sta(am)}
+            0x8D => {let am = self.am_absolute();   self.inst_sta(am)}
+            0x9D => {let am = self.am_absolute_x(); self.inst_sta(am)}
+            0x99 => {let am = self.am_absolute_y(); self.inst_sta(am)}
+            0x81 => {let am = self.am_indirect_x(); self.inst_sta(am)}
+            0x91 => {let am = self.am_indirect_y(); self.inst_sta(am)}
+
+            // STX - Store X Register
+            0x86 => {let am = self.am_zeropage();   self.inst_stx(am)}
+            0x96 => {let am = self.am_zeropage_y(); self.inst_stx(am)}
+            0x8E => {let am = self.am_absolute();   self.inst_stx(am)}
+
+            // STY - Store Y Register
+            0x84 => {let am = self.am_zeropage();   self.inst_sty(am)}
+            0x94 => {let am = self.am_zeropage_x(); self.inst_sty(am)}
+            0x8C => {let am = self.am_absolute();   self.inst_sty(am)}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -848,6 +867,25 @@ impl Cpu {
     fn inst_sei(&mut self)
     {
         self.regs.status.i = true
+    }
+
+    /// STA - Store Accumulator
+    fn inst_sta<A: Accessor>(&mut self, accessor: A)
+    {
+        let a = self.regs.a;
+        accessor.write(self, a);
+    }
+    /// STX - Store X Register
+    fn inst_stx<A: Accessor>(&mut self, accessor: A)
+    {
+        let x = self.regs.x;
+        accessor.write(self, x);
+    }
+    /// STY - Store Y Register
+    fn inst_sty<A: Accessor>(&mut self, accessor: A)
+    {
+        let y = self.regs.y;
+        accessor.write(self, y);
     }
 }
 
@@ -1447,5 +1485,32 @@ mod tests
         assert_eq!(true, cpu.regs.status.d);
         cpu.step();
         assert_eq!(true, cpu.regs.status.i);
+    }
+
+    #[test]
+    fn test_sta()
+    {
+        let mut cpu = make_cpu(vec![0x85, 0x00]);
+        cpu.regs.a = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.mapped_mem.read_word(0x0000));
+    }
+
+    #[test]
+    fn test_stx()
+    {
+        let mut cpu = make_cpu(vec![0x86, 0x00]);
+        cpu.regs.x = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.mapped_mem.read_word(0x0000));
+    }
+
+    #[test]
+    fn test_sty()
+    {
+        let mut cpu = make_cpu(vec![0x84, 0x00]);
+        cpu.regs.y = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.mapped_mem.read_word(0x0000));
     }
 }
