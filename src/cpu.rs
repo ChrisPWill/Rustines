@@ -340,6 +340,15 @@ impl Cpu {
             0xE1 => {let am = self.am_indirect_x(); self.inst_sbc(am)}
             0xF1 => {let am = self.am_indirect_y(); self.inst_sbc(am)}
 
+            // SEC - Set Carry Flag
+            0x38 => {                               self.inst_sec()}
+
+            // SED - Set Decimal Flag
+            0xF8 => {                               self.inst_sed()}
+
+            // SEI - Set Interrupt Disable
+            0x78 => {                               self.inst_sei()}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -821,6 +830,24 @@ impl Cpu {
         let a = self.regs.a;
         self.regs.status.v = (a ^ v) & 0x80 == 0x80 && (a^(result as u8)) & 0x80 == 0x80;
         self.set_a_update_zn(result as u8);
+    }
+
+    /// SEC - Set Carry Flag
+    fn inst_sec(&mut self)
+    {
+        self.regs.status.c = true
+    }
+
+    /// SED - Set Decimal Flag
+    fn inst_sed(&mut self)
+    {
+        self.regs.status.d = true
+    }
+
+    /// SEI - Set Interrupt Disable
+    fn inst_sei(&mut self)
+    {
+        self.regs.status.i = true
     }
 }
 
@@ -1406,5 +1433,19 @@ mod tests
         assert_eq!(0x7E, cpu.regs.a);
         assert_eq!(false, cpu.regs.status.c);
         assert_eq!(true, cpu.regs.status.v);
+    }
+
+    #[test]
+    fn test_sec_sed_sei()
+    {
+        let mut cpu = make_cpu(vec![0x38, 0xF8, 0x78]);
+        assert_eq!([false, false, false], 
+                   [cpu.regs.status.c, cpu.regs.status.d, cpu.regs.status.i]);
+        cpu.step();
+        assert_eq!(true, cpu.regs.status.c);
+        cpu.step();
+        assert_eq!(true, cpu.regs.status.d);
+        cpu.step();
+        assert_eq!(true, cpu.regs.status.i);
     }
 }
