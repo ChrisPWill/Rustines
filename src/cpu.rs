@@ -392,38 +392,46 @@ impl Cpu {
     // Addressing modes
     /// Accumulator Addressing Mode
     fn am_accumulator(&mut self) -> AccumulatorAccessor { AccumulatorAccessor }
+
     /// Immediate Addressing Mode
     fn am_immediate(&mut self) -> ImmediateAccessor { ImmediateAccessor }
+
     /// Zero Page Addressing Mode
     fn am_zeropage(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_word_pc() as u16)
     }
+
     /// Zero Page X Addressing Mode
     fn am_zeropage_x(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_word_pc().wrapping_add(self.regs.x) as u16)
     }
+
     /// Zero Page Y Addressing Mode
     fn am_zeropage_y(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_word_pc().wrapping_add(self.regs.y) as u16)
     }
+
     /// Absolute Addressing Mode
     fn am_absolute(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_2words_pc())
     }
+
     /// Absolute X Addressing Mode
     fn am_absolute_x(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_2words_pc().wrapping_add(self.regs.x as u16))
     }
+
     /// Absolute Y Addressing Mode
     fn am_absolute_y(&mut self) -> MemoryAccessor
     {
         MemoryAccessor::new(self.read_2words_pc().wrapping_add(self.regs.y as u16))
     }
+
     /// Indirect Addressing Mode
     fn am_indirect(&mut self) -> MemoryAccessor
     {
@@ -431,6 +439,7 @@ impl Cpu {
         let split_addr = self.mapped_mem.read_2words(rel_addr);
         MemoryAccessor::new(split_addr[0] as u16 | (split_addr[1] as u16) << 8)
     }
+
     /// Indirect X (Indexed Indirect) Addressing Mode
     fn am_indirect_x(&mut self) -> MemoryAccessor
     {
@@ -438,6 +447,7 @@ impl Cpu {
         let split_addr = self.mapped_mem.read_2words(rel_addr);
         MemoryAccessor::new(split_addr[0] as u16 | (split_addr[1] as u16) << 8)
     }
+
     /// Indirect Y (Indirect Indexed) Addressing Mode
     fn am_indirect_y(&mut self) -> MemoryAccessor
     {
@@ -454,22 +464,27 @@ impl Cpu {
         self.regs.pc += 1;
         word
     }
+
+    /// Read two words at PC and implement the PC
     fn read_2words_pc(&mut self) -> u16
     {
         self.read_word_pc() as u16 | (self.read_word_pc() as u16) << 8
     }
+
     /// Fetches next instruction using PC
     fn step(&mut self)
     {
         let instruction = self.read_word_pc();
         self.decode(instruction)
     }
+
     // Helper functions
     /// Set accumulator and update Z/N accordingly
     fn set_a_update_zn(&mut self, a: u8)
     {
         self.regs.a = self.update_zn(a);
     }
+
     /// Echo a value while updating Z/N accordingly
     fn update_zn(&mut self, val: u8) -> u8
     {
@@ -477,6 +492,7 @@ impl Cpu {
         self.regs.status.n = (val & 0x80) != 0;
         val
     }
+
     /// Branches by a displacement value (coded as u8 but considered i8)
     fn branch<A: Accessor>(&mut self, accessor: A)
     {
@@ -500,6 +516,7 @@ impl Cpu {
         self.regs.status.v = (a ^ v) & 0x80 == 0 && (a^(sum as u8)) & 0x80 == 0x80;
         self.set_a_update_zn(sum as u8);
     }
+
     /// AND - Logical AND
     fn inst_and<A: Accessor>(&mut self, accessor: A)
     {
@@ -507,6 +524,7 @@ impl Cpu {
         let v = accessor.read(self);
         self.set_a_update_zn(a & v);
     }
+
     /// ASL - Arithmetic Shift Left
     fn inst_asl<A: Accessor>(&mut self, accessor: A)
     {
@@ -515,24 +533,28 @@ impl Cpu {
         let result = self.update_zn(v << 1);
         accessor.write(self, result)
     }
+
     /// BCC - Branch if Carry Clear
     fn inst_bcc<A: Accessor>(&mut self, accessor: A)
     {
         if !self.regs.status.c { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BCS - Branch if Carry Set
     fn inst_bcs<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.c { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BEQ - Branch if Equal
     fn inst_beq<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.z { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BIT - Bit Test
     fn inst_bit<A: Accessor>(&mut self, accessor: A)
     {
@@ -542,18 +564,21 @@ impl Cpu {
         self.regs.status.v = v & 0x40 != 0;
         self.regs.status.n = v & 0x80 != 0;
     }
+
     /// BMI - Branch if Minus
     fn inst_bmi<A: Accessor>(&mut self, accessor: A)
     {
         if self.regs.status.n { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BPL - Branch if Positive
     fn inst_bpl<A: Accessor>(&mut self, accessor: A)
     {
         if !self.regs.status.n { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BNE - Branch if Not Equal
     fn inst_bne<A: Accessor>(&mut self, accessor: A)
     {
@@ -596,6 +621,7 @@ impl Cpu {
         if !self.regs.status.v { self.branch(accessor) }
         else { self.skip1() }
     }
+
     /// BVS - Branch if Overflow Set
     fn inst_bvs<A: Accessor>(&mut self, accessor: A)
     {
@@ -893,12 +919,14 @@ impl Cpu {
         let a = self.regs.a;
         accessor.write(self, a);
     }
+
     /// STX - Store X Register
     fn inst_stx<A: Accessor>(&mut self, accessor: A)
     {
         let x = self.regs.x;
         accessor.write(self, x);
     }
+
     /// STY - Store Y Register
     fn inst_sty<A: Accessor>(&mut self, accessor: A)
     {
