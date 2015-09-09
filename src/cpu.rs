@@ -368,6 +368,24 @@ impl Cpu {
             0x94 => {let am = self.am_zeropage_x(); self.inst_sty(am)}
             0x8C => {let am = self.am_absolute();   self.inst_sty(am)}
 
+            // TAX - Transfer Accumulator to X
+            0xAA => {                               self.inst_tax()}
+
+            // TAY - Transfer Accumulator to Y
+            0xA8 => {                               self.inst_tay()}
+
+            // TSX - Transfer Stack Pointer to X
+            0xBA => {                               self.inst_tsx()}
+
+            // TXA - Transfer X to Accumulator
+            0x8A => {                               self.inst_txa()}
+
+            // TXS - Transfer X to Stack Pointer
+            0x9A => {                               self.inst_txs()}
+
+            // TYA - Transfer Y to Accumulator
+            0x98 => {                               self.inst_tya()}
+
             _    => panic!("Unknown instruction error."),
         }
     }
@@ -887,6 +905,48 @@ impl Cpu {
         let y = self.regs.y;
         accessor.write(self, y);
     }
+
+    /// TAX - Transfer Accumulator to X
+    fn inst_tax(&mut self)
+    {
+        let a = self.regs.a;
+        self.regs.x = self.update_zn(a)
+    }
+
+    /// TAY - Transfer Accumulator to Y
+    fn inst_tay(&mut self)
+    {
+        let a = self.regs.a;
+        self.regs.y = self.update_zn(a)
+    }
+
+    /// TSX - Transfer Stack Pointer to X
+    fn inst_tsx(&mut self)
+    {
+        let sp = self.regs.sp;
+        self.regs.x = self.update_zn(sp)
+    }
+
+    /// TXA - Transfer X to Accumulator
+    fn inst_txa(&mut self)
+    {
+        let x = self.regs.x;
+        self.regs.a = self.update_zn(x)
+    }
+
+    /// TXS - Transfer X to Stack Pointer
+    fn inst_txs(&mut self)
+    {
+        let x = self.regs.x;
+        self.regs.sp = self.update_zn(x)
+    }
+
+    /// TYA - Transfer Y to Accumulator
+    fn inst_tya(&mut self)
+    {
+        self.regs.a = self.regs.y;
+    }
+
 }
 
 #[cfg(test)]
@@ -1512,5 +1572,48 @@ mod tests
         cpu.regs.y = 0xFA;
         cpu.step();
         assert_eq!(0xFA, cpu.mapped_mem.read_word(0x0000));
+    }
+
+    #[test]
+    fn test_tax_txa()
+    {
+        let mut cpu = make_cpu(vec![0xAA, 0x8A]);
+        cpu.regs.a = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.x);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.regs.x = 0x00;
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.z);
+        assert_eq!(false, cpu.regs.status.n);
+    }
+
+    #[test]
+    fn test_tay_tya()
+    {
+        let mut cpu = make_cpu(vec![0xA8, 0x98]);
+        cpu.regs.a = 0xFA;
+        cpu.step();
+        assert_eq!(0xFA, cpu.regs.y);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.regs.y = 0x00;
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.a);
+    }
+
+    #[test]
+    fn test_tsx_txs()
+    {
+        let mut cpu = make_cpu(vec![0xBA, 0x9A]);
+        cpu.step();
+        assert_eq!(0xFF, cpu.regs.x);
+        assert_eq!(false, cpu.regs.status.z);
+        assert_eq!(true, cpu.regs.status.n);
+        cpu.regs.x = 0x00;
+        cpu.step();
+        assert_eq!(0x00, cpu.regs.sp);
     }
 }
