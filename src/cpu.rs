@@ -327,7 +327,18 @@ impl Cpu {
             0x6E => {let am = self.am_absolute();   self.inst_ror(am)}
             0x7E => {let am = self.am_absolute_x(); self.inst_ror(am)}
             
+            // RTI - Return from Interrupt
             0x40 => {                               self.inst_rti()}
+
+            // SBC - Subtract with Carry
+            0xE9 => {let am = self.am_immediate();  self.inst_sbc(am)}
+            0xE5 => {let am = self.am_zeropage();   self.inst_sbc(am)}
+            0xF5 => {let am = self.am_zeropage_x(); self.inst_sbc(am)}
+            0xED => {let am = self.am_absolute();   self.inst_sbc(am)}
+            0xFD => {let am = self.am_absolute_x(); self.inst_sbc(am)}
+            0xF9 => {let am = self.am_absolute_y(); self.inst_sbc(am)}
+            0xE1 => {let am = self.am_indirect_x(); self.inst_sbc(am)}
+            0xF1 => {let am = self.am_indirect_y(); self.inst_sbc(am)}
 
             _    => panic!("Unknown instruction error."),
         }
@@ -797,6 +808,19 @@ impl Cpu {
         let pc_l = self.pop_word();
         let pc_h = self.pop_word();
         self.regs.pc = (pc_h as u16) << 8 | pc_l as u16;
+    }
+
+    /// SBC - Subtract With Carry
+    fn inst_sbc<A: Accessor>(&mut self, accessor: A)
+    {
+        let v = accessor.read(self);
+        let result = (self.regs.a as u16)
+            .wrapping_add(- v as u16)
+            .wrapping_add(- if !self.regs.status.c {1} else {0});
+        self.regs.status.c = (result & 0x100) == 0;
+        let a = self.regs.a;
+        self.regs.status.v = (a ^ v) & 0x80 == 0x80 && (a^(result as u8)) & 0x80 == 0x80;
+        self.set_a_update_zn(result as u8);
     }
 }
 
@@ -1362,5 +1386,25 @@ mod tests
         cpu.step(); // RTI, get old status and PC
         assert_eq!(return_point, cpu.regs.pc);
         assert_eq!(true, cpu.regs.status.z); // should return to previous value
+    }
+
+    #[test]
+    fn test_sbc()
+    {
+        let mut cpu = make_cpu(vec![0xE9, 0x11, 0xE9, 0x89, 0xE9, 0x1A]);
+        cpu.regs.status.c = true;
+        cpu.regs.a = 0x33;
+        cpu.step();
+        assert_eq!(0x22, cpu.regs.a);
+        assert_eq!(false, cpu.regs.status.c);
+        assert_eq!(false, cpu.regs.status.v);
+        cpu.step();
+        assert_eq!(0x98, cpu.regs.a);
+        assert_eq!(true, cpu.regs.status.c);
+        assert_eq!(true, cpu.regs.status.v);
+        cpu.step();
+        assert_eq!(0x7E, cpu.regs.a);
+        assert_eq!(false, cpu.regs.status.c);
+        assert_eq!(true, cpu.regs.status.v);
     }
 }
