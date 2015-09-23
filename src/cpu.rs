@@ -124,7 +124,71 @@ impl Cpu {
     {
         match instruction
         {
-            // ADC - Add With Carry
+
+            // -------------------
+            // Branch instructions
+            // -------------------
+
+            // -- BCC - Branch if Carry Clear
+            0x90 => {let am = self.am_immediate();  self.inst_bcc(am)}
+
+            // -- BCS - Branch if Carry Set
+            0xB0 => {let am = self.am_immediate();  self.inst_bcs(am)}
+
+            // -- BEQ - Branch if Equal
+            0xF0 => {let am = self.am_immediate();  self.inst_beq(am)}
+
+            // -- BMI - Branch if Minus
+            0x30 => {let am = self.am_immediate();  self.inst_bmi(am)}
+
+            // -- BPL - Branch if Positive
+            0x10 => {let am = self.am_immediate();  self.inst_bpl(am)}
+
+            // -- BNE - Branch if Not Equal
+            0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
+
+            // -- BVC - Branch if Overflow Clear
+            0x50 => {let am = self.am_immediate();  self.inst_bvc(am)}
+
+            // -- BVS - Branch is Overflow Set
+            0x70 => {let am = self.am_immediate();  self.inst_bvs(am)}
+
+            // -----------------
+            // Jump instructions
+            // -----------------
+
+            // -- JMP - Jump
+            0x4C => {                               self.inst_jmp(true)}
+            0x6C => {                               self.inst_jmp(false)}
+
+            // -- JSR - Jump to Subroutine
+            0x20 => {                               self.inst_jsr()}
+
+            // -- RTS - Return from Subroutine
+            0x60 => {                               self.inst_rts()}
+
+            // ------------------
+            // Stack instructions
+            // ------------------
+
+            // -- PHA - Push Accumulator
+            0x48 => {                               self.inst_pha()}
+
+            // -- PHP - Push Processor Status
+            0x08 => {                               self.inst_php()}
+
+            // -- PLA - Pull Accumulator
+            0x68 => {                               self.inst_pla()}
+            
+            // -- PLP - Pull Processor Status
+            0x28 => {                               self.inst_plp()}
+
+
+            // -----------------------
+            // Arithmetic instructions
+            // -----------------------
+
+            // -- ADC - Add With Carry
             0x69 => {let am = self.am_immediate();  self.inst_adc(am)}
             0x65 => {let am = self.am_zeropage();   self.inst_adc(am)}
             0x75 => {let am = self.am_zeropage_x(); self.inst_adc(am)}
@@ -133,6 +197,44 @@ impl Cpu {
             0x79 => {let am = self.am_absolute_y(); self.inst_adc(am)}
             0x61 => {let am = self.am_indirect_x(); self.inst_adc(am)}
             0x71 => {let am = self.am_indirect_y(); self.inst_adc(am)}
+
+            // SBC - Subtract with Carry
+            0xE9 => {let am = self.am_immediate();  self.inst_sbc(am)}
+            0xE5 => {let am = self.am_zeropage();   self.inst_sbc(am)}
+            0xF5 => {let am = self.am_zeropage_x(); self.inst_sbc(am)}
+            0xED => {let am = self.am_absolute();   self.inst_sbc(am)}
+            0xFD => {let am = self.am_absolute_x(); self.inst_sbc(am)}
+            0xF9 => {let am = self.am_absolute_y(); self.inst_sbc(am)}
+            0xE1 => {let am = self.am_indirect_x(); self.inst_sbc(am)}
+            0xF1 => {let am = self.am_indirect_y(); self.inst_sbc(am)}
+
+            // INC - Increment Memory
+            0xE6 => {let am = self.am_zeropage();   self.inst_inc(am)}
+            0xF6 => {let am = self.am_zeropage_x(); self.inst_inc(am)}
+            0xEE => {let am = self.am_absolute();   self.inst_inc(am)}
+            0xFE => {let am = self.am_absolute_x(); self.inst_inc(am)}
+
+            // INX - Increment X Register
+            0xE8 => {                               self.inst_inx()}
+
+            // INY - Increment Y Register
+            0xC8 => {                               self.inst_iny()}
+
+            // DEC - Decrement Memory
+            0xC6 => {let am = self.am_zeropage();   self.inst_dec(am)}
+            0xD6 => {let am = self.am_zeropage_x(); self.inst_dec(am)}
+            0xCE => {let am = self.am_absolute();   self.inst_dec(am)}
+            0xDE => {let am = self.am_absolute_x(); self.inst_dec(am)}
+
+            // DEX - Decrement X Register
+            0xCA => {                               self.inst_dex()}
+
+            // DEY - Decrement Y Register
+            0x88 => {                               self.inst_dey()}
+
+            // ------------------
+            // Logic instructions
+            // ------------------
 
             // AND - Logical AND
             0x29 => {let am = self.am_immediate();  self.inst_and(am)}
@@ -144,6 +246,26 @@ impl Cpu {
             0x21 => {let am = self.am_indirect_x(); self.inst_and(am)}
             0x31 => {let am = self.am_indirect_y(); self.inst_and(am)}
 
+            // ORA - Logical Inclusive OR
+            0x09 => {let am = self.am_immediate();  self.inst_ora(am)}
+            0x05 => {let am = self.am_zeropage();   self.inst_ora(am)}
+            0x15 => {let am = self.am_zeropage_x(); self.inst_ora(am)}
+            0x0D => {let am = self.am_absolute();   self.inst_ora(am)}
+            0x1D => {let am = self.am_absolute_x(); self.inst_ora(am)}
+            0x19 => {let am = self.am_absolute_y(); self.inst_ora(am)}
+            0x01 => {let am = self.am_indirect_x(); self.inst_ora(am)}
+            0x11 => {let am = self.am_indirect_y(); self.inst_ora(am)}
+
+            // EOR - Exclusive OR
+            0x49 => {let am = self.am_immediate();  self.inst_eor(am)}
+            0x45 => {let am = self.am_zeropage();   self.inst_eor(am)}
+            0x55 => {let am = self.am_zeropage_x(); self.inst_eor(am)}
+            0x4D => {let am = self.am_absolute();   self.inst_eor(am)}
+            0x5D => {let am = self.am_absolute_x(); self.inst_eor(am)}
+            0x59 => {let am = self.am_absolute_y(); self.inst_eor(am)}
+            0x41 => {let am = self.am_indirect_x(); self.inst_eor(am)}
+            0x51 => {let am = self.am_indirect_y(); self.inst_eor(am)}
+
             // ASL - Arithmetic Shift Left
             0x0A => {let am = self.am_accumulator();self.inst_asl(am)}
             0x06 => {let am = self.am_zeropage();   self.inst_asl(am)}
@@ -151,54 +273,30 @@ impl Cpu {
             0x0E => {let am = self.am_absolute();   self.inst_asl(am)}
             0x1E => {let am = self.am_absolute_x(); self.inst_asl(am)}
 
-            // BCC - Branch if Carry Clear
-            // (treat relative addressing mode as immediate)
-            0x90 => {let am = self.am_immediate();  self.inst_bcc(am)}
+            // LSR - Logical Shift Right
+            0x4A => {let am = self.am_accumulator();self.inst_lsr(am)}
+            0x46 => {let am = self.am_zeropage();   self.inst_lsr(am)}
+            0x56 => {let am = self.am_zeropage_x(); self.inst_lsr(am)}
+            0x4E => {let am = self.am_absolute();   self.inst_lsr(am)}
+            0x5E => {let am = self.am_absolute_x(); self.inst_lsr(am)}
 
-            // BCS - Branch if Carry Set
-            // (see previous)
-            0xB0 => {let am = self.am_immediate();  self.inst_bcs(am)}
-
-            // BEQ - Branch if Equal
-            // (see previous)
-            0xF0 => {let am = self.am_immediate();  self.inst_beq(am)}
-
-            // BIT - Bit Test
-            0x24 => {let am = self.am_zeropage();   self.inst_bit(am)}
-            0x2C => {let am = self.am_absolute();   self.inst_bit(am)}
-
-            // BMI - Branch if Minus
-            // (see BCC)
-            0x30 => {let am = self.am_immediate();  self.inst_bmi(am)}
-
-            // BPL - Branch if Positive
-            // (see BCC)
-            0x10 => {let am = self.am_immediate();  self.inst_bpl(am)}
-
-            // BNE - Branch if Not Equal
-            // (see BCC)
-            0xD0 => {let am = self.am_immediate();  self.inst_bne(am)}
-
-            // BRK - Force Interrupt
-            0x00 => {                               self.inst_brk()}
-
-            // BVC - Branch if Overflow Clear
-            0x50 => {let am = self.am_immediate();  self.inst_bvc(am)}
-
-            // BVS - Branch is Overflow Set
-            0x70 => {let am = self.am_immediate();  self.inst_bvs(am)}
-
-            // CLC - Clear Carry Flag
-            0x18 => {                               self.inst_clc()}
-
-            // CLD - Clear Decimal Mode
-            0xD8 => {                               self.inst_cld()}
+            // ROL - Rotate Left
+            0x2A => {let am = self.am_accumulator();self.inst_rol(am)}
+            0x26 => {let am = self.am_zeropage();   self.inst_rol(am)}
+            0x36 => {let am = self.am_zeropage_x(); self.inst_rol(am)}
+            0x2E => {let am = self.am_absolute();   self.inst_rol(am)}
+            0x3E => {let am = self.am_absolute_x(); self.inst_rol(am)}
             
-            // CLI - Clear Interrupt Disable
-            0x58 => {                               self.inst_cli()}
+            // ROR - Rotate Right
+            0x6A => {let am = self.am_accumulator();self.inst_ror(am)}
+            0x66 => {let am = self.am_zeropage();   self.inst_ror(am)}
+            0x76 => {let am = self.am_zeropage_x(); self.inst_ror(am)}
+            0x6E => {let am = self.am_absolute();   self.inst_ror(am)}
+            0x7E => {let am = self.am_absolute_x(); self.inst_ror(am)}
 
-            // CLV - Clear Overflow Flag
-            0xB8 => {                               self.inst_clv()}
+            // -----------------------
+            // Comparison instructions
+            // -----------------------
 
             // CMP - Compare
             0xC9 => {let am = self.am_immediate();  self.inst_cmp(am)}
@@ -220,50 +318,51 @@ impl Cpu {
             0xC4 => {let am = self.am_zeropage();   self.inst_cpy(am)}
             0xCC => {let am = self.am_absolute();   self.inst_cpy(am)}
             
-            // DEC - Decrement Memory
-            0xC6 => {let am = self.am_zeropage();   self.inst_dec(am)}
-            0xD6 => {let am = self.am_zeropage_x(); self.inst_dec(am)}
-            0xCE => {let am = self.am_absolute();   self.inst_dec(am)}
-            0xDE => {let am = self.am_absolute_x(); self.inst_dec(am)}
-
-            // DEX - Decrement X Register
-            0xCA => {                               self.inst_dex()}
-
-            // DEY - Decrement Y Register
-            0x88 => {                               self.inst_dey()}
-
-            // EOR - Exclusive OR
-            0x49 => {let am = self.am_immediate();  self.inst_eor(am)}
-            0x45 => {let am = self.am_zeropage();   self.inst_eor(am)}
-            0x55 => {let am = self.am_zeropage_x(); self.inst_eor(am)}
-            0x4D => {let am = self.am_absolute();   self.inst_eor(am)}
-            0x5D => {let am = self.am_absolute_x(); self.inst_eor(am)}
-            0x59 => {let am = self.am_absolute_y(); self.inst_eor(am)}
-            0x41 => {let am = self.am_indirect_x(); self.inst_eor(am)}
-            0x51 => {let am = self.am_indirect_y(); self.inst_eor(am)}
-
-            // INC - Increment Memory
-            0xE6 => {let am = self.am_zeropage();   self.inst_inc(am)}
-            0xF6 => {let am = self.am_zeropage_x(); self.inst_inc(am)}
-            0xEE => {let am = self.am_absolute();   self.inst_inc(am)}
-            0xFE => {let am = self.am_absolute_x(); self.inst_inc(am)}
-
-            // INX - Increment X Register
-            0xE8 => {                               self.inst_inx()}
-
-            // INY - Increment Y Register
-            0xC8 => {                               self.inst_iny()}
-
-            // JMP - Jump
-            // (see JMP doc for unique function format)
-            0x4C => {                               self.inst_jmp(true)}
-            0x6C => {                               self.inst_jmp(false)}
             
-            // JSR - Jump to Subroutine
-            0x20 => {                               self.inst_jsr()}
+            // Clear/set flags
+            // CLC - Clear Carry Flag
+            0x18 => {                               self.inst_clc()}
 
-            // RTS - Return from Subroutine
-            0x60 => {                               self.inst_rts()}
+            // CLD - Clear Decimal Mode
+            0xD8 => {                               self.inst_cld()}
+            
+            // CLI - Clear Interrupt Disable
+            0x58 => {                               self.inst_cli()}
+
+            // CLV - Clear Overflow Flag
+            0xB8 => {                               self.inst_clv()}
+
+            // SEC - Set Carry Flag
+            0x38 => {                               self.inst_sec()}
+
+            // SED - Set Decimal Flag
+            0xF8 => {                               self.inst_sed()}
+
+            // SEI - Set Interrupt Disable
+            0x78 => {                               self.inst_sei()}
+
+            // --------------------------------
+            // Storing and loading instructions
+            // --------------------------------
+
+            // STA - Store Accumulator
+            0x85 => {let am = self.am_zeropage();   self.inst_sta(am)}
+            0x95 => {let am = self.am_zeropage_x(); self.inst_sta(am)}
+            0x8D => {let am = self.am_absolute();   self.inst_sta(am)}
+            0x9D => {let am = self.am_absolute_x(); self.inst_sta(am)}
+            0x99 => {let am = self.am_absolute_y(); self.inst_sta(am)}
+            0x81 => {let am = self.am_indirect_x(); self.inst_sta(am)}
+            0x91 => {let am = self.am_indirect_y(); self.inst_sta(am)}
+
+            // STX - Store X Register
+            0x86 => {let am = self.am_zeropage();   self.inst_stx(am)}
+            0x96 => {let am = self.am_zeropage_y(); self.inst_stx(am)}
+            0x8E => {let am = self.am_absolute();   self.inst_stx(am)}
+
+            // STY - Store Y Register
+            0x84 => {let am = self.am_zeropage();   self.inst_sty(am)}
+            0x94 => {let am = self.am_zeropage_x(); self.inst_sty(am)}
+            0x8C => {let am = self.am_absolute();   self.inst_sty(am)}
 
             // LDA - Load Accmulator
             0xA9 => {let am = self.am_immediate();  self.inst_lda(am)}
@@ -289,92 +388,9 @@ impl Cpu {
             0xAC => {let am = self.am_absolute();   self.inst_ldy(am)}
             0xBC => {let am = self.am_absolute_x(); self.inst_ldy(am)}
 
-            // LSR - Logical Shift Right
-            0x4A => {let am = self.am_accumulator();self.inst_lsr(am)}
-            0x46 => {let am = self.am_zeropage();   self.inst_lsr(am)}
-            0x56 => {let am = self.am_zeropage_x(); self.inst_lsr(am)}
-            0x4E => {let am = self.am_absolute();   self.inst_lsr(am)}
-            0x5E => {let am = self.am_absolute_x(); self.inst_lsr(am)}
-
-            // NOP - No Operation
-            0xEA => { ; }
-
-            // ORA - Logical Inclusive OR
-            0x09 => {let am = self.am_immediate();  self.inst_ora(am)}
-            0x05 => {let am = self.am_zeropage();   self.inst_ora(am)}
-            0x15 => {let am = self.am_zeropage_x(); self.inst_ora(am)}
-            0x0D => {let am = self.am_absolute();   self.inst_ora(am)}
-            0x1D => {let am = self.am_absolute_x(); self.inst_ora(am)}
-            0x19 => {let am = self.am_absolute_y(); self.inst_ora(am)}
-            0x01 => {let am = self.am_indirect_x(); self.inst_ora(am)}
-            0x11 => {let am = self.am_indirect_y(); self.inst_ora(am)}
-
-            // PHA - Push Accumulator
-            0x48 => {                               self.inst_pha()}
-
-            // PHP - Push Processor Status
-            0x08 => {                               self.inst_php()}
-
-            // PLA - Pull Accumulator
-            0x68 => {                               self.inst_pla()}
-            
-            // PLP - Pull Processor Status
-            0x28 => {                               self.inst_plp()}
-
-            // ROL - Rotate Left
-            0x2A => {let am = self.am_accumulator();self.inst_rol(am)}
-            0x26 => {let am = self.am_zeropage();   self.inst_rol(am)}
-            0x36 => {let am = self.am_zeropage_x(); self.inst_rol(am)}
-            0x2E => {let am = self.am_absolute();   self.inst_rol(am)}
-            0x3E => {let am = self.am_absolute_x(); self.inst_rol(am)}
-            
-            // ROR - Rotate Right
-            0x6A => {let am = self.am_accumulator();self.inst_ror(am)}
-            0x66 => {let am = self.am_zeropage();   self.inst_ror(am)}
-            0x76 => {let am = self.am_zeropage_x(); self.inst_ror(am)}
-            0x6E => {let am = self.am_absolute();   self.inst_ror(am)}
-            0x7E => {let am = self.am_absolute_x(); self.inst_ror(am)}
-            
-            // RTI - Return from Interrupt
-            0x40 => {                               self.inst_rti()}
-
-            // SBC - Subtract with Carry
-            0xE9 => {let am = self.am_immediate();  self.inst_sbc(am)}
-            0xE5 => {let am = self.am_zeropage();   self.inst_sbc(am)}
-            0xF5 => {let am = self.am_zeropage_x(); self.inst_sbc(am)}
-            0xED => {let am = self.am_absolute();   self.inst_sbc(am)}
-            0xFD => {let am = self.am_absolute_x(); self.inst_sbc(am)}
-            0xF9 => {let am = self.am_absolute_y(); self.inst_sbc(am)}
-            0xE1 => {let am = self.am_indirect_x(); self.inst_sbc(am)}
-            0xF1 => {let am = self.am_indirect_y(); self.inst_sbc(am)}
-
-            // SEC - Set Carry Flag
-            0x38 => {                               self.inst_sec()}
-
-            // SED - Set Decimal Flag
-            0xF8 => {                               self.inst_sed()}
-
-            // SEI - Set Interrupt Disable
-            0x78 => {                               self.inst_sei()}
-
-            // STA - Store Accumulator
-            0x85 => {let am = self.am_zeropage();   self.inst_sta(am)}
-            0x95 => {let am = self.am_zeropage_x(); self.inst_sta(am)}
-            0x8D => {let am = self.am_absolute();   self.inst_sta(am)}
-            0x9D => {let am = self.am_absolute_x(); self.inst_sta(am)}
-            0x99 => {let am = self.am_absolute_y(); self.inst_sta(am)}
-            0x81 => {let am = self.am_indirect_x(); self.inst_sta(am)}
-            0x91 => {let am = self.am_indirect_y(); self.inst_sta(am)}
-
-            // STX - Store X Register
-            0x86 => {let am = self.am_zeropage();   self.inst_stx(am)}
-            0x96 => {let am = self.am_zeropage_y(); self.inst_stx(am)}
-            0x8E => {let am = self.am_absolute();   self.inst_stx(am)}
-
-            // STY - Store Y Register
-            0x84 => {let am = self.am_zeropage();   self.inst_sty(am)}
-            0x94 => {let am = self.am_zeropage_x(); self.inst_sty(am)}
-            0x8C => {let am = self.am_absolute();   self.inst_sty(am)}
+            // ------------------------
+            // Transferral instructions
+            // ------------------------
 
             // TAX - Transfer Accumulator to X
             0xAA => {                               self.inst_tax()}
@@ -393,6 +409,23 @@ impl Cpu {
 
             // TYA - Transfer Y to Accumulator
             0x98 => {                               self.inst_tya()}
+
+            // ------------------
+            // Other instructions
+            // ------------------
+
+            // NOP - No Operation
+            0xEA => { ; }
+
+            // BIT - Bit Test
+            0x24 => {let am = self.am_zeropage();   self.inst_bit(am)}
+            0x2C => {let am = self.am_absolute();   self.inst_bit(am)}
+
+            // BRK - Force Interrupt
+            0x00 => {                               self.inst_brk()}
+
+            // RTI - Return from Interrupt
+            0x40 => {                               self.inst_rti()}
 
             _    => panic!("Unknown instruction error."),
         }
