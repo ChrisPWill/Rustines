@@ -15,10 +15,12 @@ struct Status
 
 impl Status 
 {
+    /// Initiates status register
     fn new() -> Status
     {
         Status { c: false, z: false, i: false, d: false, b: false, v: false, n: false}
     }
+    /// Exports state as a byte (mainly to push to stack)
     fn as_byte(&self) -> u8
     {
         (if self.n {1 << 7} else {0}) 
@@ -29,6 +31,7 @@ impl Status
             | (if self.z {1 << 1} else {0})
             | (if self.c {1} else {0})
     }
+    /// Loads state from a byte (mainly to pop from stack)
     fn load_byte(&mut self, status_byte: u8)
     {
         self.n = if status_byte & 0x80 != 0 {true} else {false};
@@ -54,6 +57,7 @@ struct Regs
 
 impl Regs 
 {
+    /// Initiates the CPU registers
     fn new() -> Regs
     {
         Regs{ pc: 0x8000, sp: 0xFF, a: 0x00, x: 0x00, y: 0x0, status: Status::new() }
@@ -62,7 +66,9 @@ impl Regs
 
 trait Accessor
 {
+    /// Read a byte based on an accessor's addressing mode.
     fn read(&self, cpu: &mut Cpu) -> u8;
+    /// Write a byte based on an accessor's addressing mode
     fn write(&self, cpu: &mut Cpu, val: u8);
 }
 
@@ -107,11 +113,13 @@ pub struct Cpu
 }
 
 impl Cpu {
+    /// Initiate a new CPU using a particular mapped memory structure (usually including cartridge
+    /// data)
     fn new(mapped_mem: MappedMem) -> Cpu
     {
         Cpu{ regs: Regs::new(), mapped_mem: mapped_mem }
     }
-    /// Decode an instruction
+    /// Decode an instruction and perform it
     fn decode(&mut self, instruction: u8)
     {
         match instruction
