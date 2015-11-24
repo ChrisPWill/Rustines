@@ -147,86 +147,94 @@ impl Mem<u16, u8> for PpuMem
     {
         if addr < 0x1000 
         {
-            self.pt_0.read_word(addr);
+            self.pt_0.read_word(addr)
         }
         else if addr < 0x2000
         {
-            self.pt_1.read_word(addr);
+            self.pt_1.read_word(addr)
         }
         else if addr < 0x23C0
         {
-            self.nt_0.read_word(addr);
+            self.nt_0.read_word(addr)
         }
         else if addr < 0x2400
         {
-            self.at_0.read_word(addr);
+            self.at_0.read_word(addr)
         }
         else if addr < 0x27C0
         {
-            self.nt_1.read_word(addr);
+            self.nt_1.read_word(addr)
         }
         else if addr < 0x2800
         {
-            self.at_1.read_word(addr);
+            self.at_1.read_word(addr)
         }
         else if addr < 0x2BC0
         {
-            self.nt_2.read_word(addr);
+            self.nt_2.read_word(addr)
         }
         else if addr < 0x2C00
         {
-            self.at_2.read_word(addr);
+            self.at_2.read_word(addr)
         }
         else if addr < 0x2FC0
         {
-            self.nt_3.read_word(addr);
+            self.nt_3.read_word(addr)
         }
         else if addr < 0x3000
         {
-            self.at_3.read_word(addr);
+            self.at_3.read_word(addr)
+        }
+        else
+        {
+            panic!("Ppu address out of range.");
         }
     }
     fn write_word(&mut self, addr: u16, word: u8)
     {
         if addr < 0x1000 
         {
-            self.pt_0.write_word(addr, word);
+            self.pt_0.write_word(addr, word)
         }
         else if addr < 0x2000
         {
-            self.pt_1.write_word(addr, word);
+            self.pt_1.write_word(addr, word)
         }
         else if addr < 0x23C0
         {
-            self.nt_0.write_word(addr, word);
+            self.nt_0.write_word(addr, word)
         }
         else if addr < 0x2400
         {
-            self.at_0.write_word(addr, word);
+            self.at_0.write_word(addr, word)
         }
         else if addr < 0x27C0
         {
-            self.nt_1.write_word(addr, word);
+            self.nt_1.write_word(addr, word)
         }
         else if addr < 0x2800
         {
-            self.at_1.write_word(addr, word);
+            self.at_1.write_word(addr, word)
         }
         else if addr < 0x2BC0
         {
-            self.nt_2.write_word(addr, word);
+            self.nt_2.write_word(addr, word)
         }
         else if addr < 0x2C00
         {
-            self.at_2.write_word(addr, word);
+            self.at_2.write_word(addr, word)
         }
         else if addr < 0x2FC0
         {
-            self.nt_3.write_word(addr, word);
+            self.nt_3.write_word(addr, word)
         }
         else if addr < 0x3000
         {
-            self.at_3.write_word(addr, word);
+            self.at_3.write_word(addr, word)
+        }
+        else
+        {
+            panic!("Ppu address out of range.");
         }
     }
 }
