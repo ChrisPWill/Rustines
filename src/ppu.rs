@@ -126,6 +126,111 @@ impl Mem<u16, u8> for AttributeTable
     }
 }
 
+/// A map of the PPU's memory structures
+pub struct PpuMem 
+{
+    pt_0: PatternTable,
+    pt_1: PatternTable,
+    nt_0: NameTable,
+    at_0: AttributeTable,
+    nt_1: NameTable,
+    at_1: AttributeTable,
+    nt_2: NameTable,
+    at_2: AttributeTable,
+    nt_3: NameTable,
+    at_3: AttributeTable,
+}
+
+impl Mem<u16, u8> for PpuMem
+{
+    fn read_word(&self, addr: u16) -> u8
+    {
+        if addr < 0x1000 
+        {
+            self.pt_0.read_word(addr);
+        }
+        else if addr < 0x2000
+        {
+            self.pt_1.read_word(addr);
+        }
+        else if addr < 0x23C0
+        {
+            self.nt_0.read_word(addr);
+        }
+        else if addr < 0x2400
+        {
+            self.at_0.read_word(addr);
+        }
+        else if addr < 0x27C0
+        {
+            self.nt_1.read_word(addr);
+        }
+        else if addr < 0x2800
+        {
+            self.at_1.read_word(addr);
+        }
+        else if addr < 0x2BC0
+        {
+            self.nt_2.read_word(addr);
+        }
+        else if addr < 0x2C00
+        {
+            self.at_2.read_word(addr);
+        }
+        else if addr < 0x2FC0
+        {
+            self.nt_3.read_word(addr);
+        }
+        else if addr < 0x3000
+        {
+            self.at_3.read_word(addr);
+        }
+    }
+    fn write_word(&mut self, addr: u16, word: u8)
+    {
+        if addr < 0x1000 
+        {
+            self.pt_0.write_word(addr, word);
+        }
+        else if addr < 0x2000
+        {
+            self.pt_1.write_word(addr, word);
+        }
+        else if addr < 0x23C0
+        {
+            self.nt_0.write_word(addr, word);
+        }
+        else if addr < 0x2400
+        {
+            self.at_0.write_word(addr, word);
+        }
+        else if addr < 0x27C0
+        {
+            self.nt_1.write_word(addr, word);
+        }
+        else if addr < 0x2800
+        {
+            self.at_1.write_word(addr, word);
+        }
+        else if addr < 0x2BC0
+        {
+            self.nt_2.write_word(addr, word);
+        }
+        else if addr < 0x2C00
+        {
+            self.at_2.write_word(addr, word);
+        }
+        else if addr < 0x2FC0
+        {
+            self.nt_3.write_word(addr, word);
+        }
+        else if addr < 0x3000
+        {
+            self.at_3.write_word(addr, word);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests
 {
