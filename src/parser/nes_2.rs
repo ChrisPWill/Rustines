@@ -18,7 +18,32 @@ impl NesParser for Parser
         let mut header_bytes: [u8; 15] = [0; 15];
         let _ = file.read_exact(&mut header_bytes);
         let header = Nes2Header::new(header_bytes);
-        return Cart;
+        let mut cart = 
+            if header.nes_2_rules 
+            {
+                Cart::new((header.prgram_bat_backed + header.prgram_not_bat_backed) as usize,
+                          (header.chrram_bat_backed + header.chrram_not_bat_backed) as usize,
+                          0)
+            }
+            else
+            {
+                Cart::new(header.prg_ram_pages as usize, 0, 0)
+            };
+        // Read 16384 byte PrgRom blocks
+        for _ in 0..header.prg_pages
+        {
+            let mut buf: [u8; 0x4000] = [0; 0x4000];
+            let _ = file.read_exact(&mut buf);
+            cart.load_prg_rom(&buf);
+        }
+        // Read 8192 byte ChrRom blocks
+        for _ in 0..header.chr_pages
+        {
+            let mut buf: [u8; 0x2000] = [0; 0x2000];
+            let _ = file.read_exact(&mut buf);
+            cart.load_chr_rom(&buf);
+        }
+        return cart;
     }
 }
 
