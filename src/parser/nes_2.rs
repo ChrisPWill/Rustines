@@ -29,6 +29,7 @@ struct Nes2Header
     submapper_num: u8,
     prg_pages: usize,
     chr_pages: usize,
+    prg_ram_pages: usize,
     four_screen: bool,
     trainer: bool,
     sram_bat_backed: bool,
@@ -51,27 +52,43 @@ impl Nes2Header
     fn new(header_bytes: [u8; 15]) -> Nes2Header
     {
         Nes2Header::check_nes_string([header_bytes[0], header_bytes[1], header_bytes[2]]);
-        Nes2Header{
+        let nes_2_rules = (header_bytes[7] & 0x08 != 0) && (header_bytes[7] & 0x04 == 0);
+        let mut header = Nes2Header{
+            nes_2_rules: nes_2_rules,
             prg_pages: ((header_bytes[4] as usize) | (((header_bytes[9] & 0x0F) as usize) << 8)),
             chr_pages: ((header_bytes[5] as usize) | (((header_bytes[9] & 0xF0) as usize) << 4)),
-            mapper_num: ((((header_bytes[6] & 0xF0) as u16) >> 4) | ((header_bytes[7] & 0xF0) as u16) | (((header_bytes[8] & 0x0F) as u16) << 4)),
+            mapper_num: ((((header_bytes[6] & 0xF0) as u16) >> 4) | ((header_bytes[7] & 0xF0) as u16)),
             four_screen: (header_bytes[6] & 0x08 != 0),
             trainer: (header_bytes[6] & 0x04 != 0),
             sram_bat_backed: (header_bytes[6] & 0x02 != 0),
             vert_mirror: (header_bytes[6] & 0x01 != 0),
-            nes_2_rules: ((header_bytes[7] & 0x08 != 0) && (header_bytes[7] & 0x04 == 0)),
             pc_10: (header_bytes[7] & 0x02 != 0),
             vs: (header_bytes[7] & 0x01 != 0),
-            submapper_num: ((header_bytes[8] & 0xF0) >> 4),
-            prgram_bat_backed: Nes2Header::ram_size_conv((header_bytes[10] & 0xF0) >> 4),
-            prgram_not_bat_backed: Nes2Header::ram_size_conv(header_bytes[10] & 0x0F),
-            chrram_bat_backed: Nes2Header::ram_size_conv((header_bytes[11] & 0xF0) >> 4),
-            chrram_not_bat_backed: Nes2Header::ram_size_conv(header_bytes[11] & 0x0F),
             pal_mode: (header_bytes[12] & 0x01 != 0),
             pal_and_ntsc: (header_bytes[12] & 0x02 != 0),
             vs_mode: (header_bytes[13] & 0x0F),
             vs_ppu: ((header_bytes[13] & 0xF0) >> 4),
+            submapper_num: 0,
+            prgram_bat_backed: 0,
+            prgram_not_bat_backed: 0,
+            chrram_bat_backed: 0,
+            chrram_not_bat_backed: 0,
+            prg_ram_pages: 0,
+        };
+        if nes_2_rules
+        {
+            header.prgram_bat_backed = Nes2Header::ram_size_conv((header_bytes[10] & 0xF0) >> 4);
+            header.prgram_not_bat_backed = Nes2Header::ram_size_conv(header_bytes[10] & 0x0F);
+            header.chrram_bat_backed = Nes2Header::ram_size_conv((header_bytes[11] & 0xF0) >> 4);
+            header.chrram_not_bat_backed = Nes2Header::ram_size_conv(header_bytes[11] & 0x0F);
+            header.mapper_num = header.mapper_num | (((header_bytes[8] & 0x0F) as u16) << 4);
+            header.submapper_num = (header_bytes[8] & 0xF0) >> 4;
         }
+        else
+        {
+            header.prg_ram_pages = header_bytes[8] as usize;
+        }
+        return header;
     }
 
     fn check_nes_string(byte_string: [u8; 3])
