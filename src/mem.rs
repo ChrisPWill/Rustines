@@ -1,11 +1,11 @@
-use std::num::One;
+use std::iter::Step;
 use std::ops::Add;
 
 /// A generic representation of memory
 ///
 /// `A` refers to the addressing type
 /// `W` refers to the word type
-pub trait Mem<A: Add<A, Output=A> + One + Copy, W: Sized + Copy> 
+pub trait Mem<A: Add<A, Output=A> + Step + Copy, W: Sized + Copy>
 {
     /// Read a word from address `addr`
     fn read_word(&self, addr: A) -> W;
@@ -14,13 +14,13 @@ pub trait Mem<A: Add<A, Output=A> + One + Copy, W: Sized + Copy>
     /// Same as `read_word`, but reads two words
     fn read_2words(&self, addr: A) -> [W;2]
     {
-        [self.read_word(addr), self.read_word(addr+A::one())]
+        [self.read_word(addr), self.read_word(addr.add_one())]
     }
     /// Same as `write_word`, but writes two words
     fn write_2words(&mut self, addr: A, words: [W;2])
     {
         self.write_word(addr, words[0]);
-        self.write_word(addr+A::one(), words[1]);
+        self.write_word(addr.add_one(), words[1]);
     }
 }
 

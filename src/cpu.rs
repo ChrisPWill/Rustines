@@ -698,7 +698,7 @@ impl Cpu {
     fn compare<A: Accessor>(&mut self, accessor: A, val: u8)
     {
         let aval = accessor.read(self);
-        let result = (val as u16).wrapping_add(-(aval as u16));
+        let result = (val as u16).wrapping_sub(aval as u16);
         let u = (result & 0x0100) != 0; // underflow occurred
 
         self.regs.status.c = !u;
@@ -731,7 +731,7 @@ impl Cpu {
     fn inst_dec<A: Accessor>(&mut self, accessor: A)
     {
         let val = accessor.read(self);
-        let result = self.update_zn(val.wrapping_add(-1));
+        let result = self.update_zn(val.wrapping_sub(1));
         accessor.write(self, result);
     }
 
@@ -739,7 +739,7 @@ impl Cpu {
     fn inst_dex(&mut self)
     {
         let x = self.regs.x;
-        let result = self.update_zn(x.wrapping_add(-1));
+        let result = self.update_zn(x.wrapping_sub(1));
         self.regs.x = result;
     }
 
@@ -747,7 +747,7 @@ impl Cpu {
     fn inst_dey(&mut self)
     {
         let y = self.regs.y;
-        let result = self.update_zn(y.wrapping_add(-1));
+        let result = self.update_zn(y.wrapping_sub(1));
         self.regs.y = result;
     }
 
@@ -928,8 +928,8 @@ impl Cpu {
     {
         let v = accessor.read(self);
         let result = (self.regs.a as u16)
-            .wrapping_add(- v as u16)
-            .wrapping_add(- if !self.regs.status.c {1} else {0});
+            .wrapping_sub(v as u16)
+            .wrapping_sub(if !self.regs.status.c {1} else {0});
         self.regs.status.c = (result & 0x100) == 0;
         let a = self.regs.a;
         self.regs.status.v = (a ^ v) & 0x80 == 0x80 && (a^(result as u8)) & 0x80 == 0x80;
