@@ -20,6 +20,20 @@ impl Status
     {
         Status { c: false, z: false, i: false, d: false, b: false, v: false, n: false}
     }
+
+    /// Loads state from a byte (mainly to pop from stack)
+    fn from_byte(status_byte: u8) -> Status
+    {
+        let n = if status_byte & 0x80 != 0 {true} else {false};
+        let v = if status_byte & 0x40 != 0 {true} else {false};
+        let b = if status_byte & 0x10 != 0 {true} else {false};
+        let d = if status_byte & 0x08 != 0 {true} else {false};
+        let i = if status_byte & 0x04 != 0 {true} else {false};
+        let z = if status_byte & 0x02 != 0 {true} else {false};
+        let c = if status_byte & 0x01 != 0 {true} else {false};
+        Status { c: c, z: z, i: i, d: d, b: b, v: v, n: n}
+    }
+
     /// Exports state as a byte (mainly to push to stack)
     fn as_byte(&self) -> u8
     {
@@ -30,17 +44,6 @@ impl Status
             | (if self.i {1 << 2} else {0}) 
             | (if self.z {1 << 1} else {0})
             | (if self.c {1} else {0})
-    }
-    /// Loads state from a byte (mainly to pop from stack)
-    fn load_byte(&mut self, status_byte: u8)
-    {
-        self.n = if status_byte & 0x80 != 0 {true} else {false};
-        self.v = if status_byte & 0x40 != 0 {true} else {false};
-        self.b = if status_byte & 0x10 != 0 {true} else {false};
-        self.d = if status_byte & 0x08 != 0 {true} else {false};
-        self.i = if status_byte & 0x04 != 0 {true} else {false};
-        self.z = if status_byte & 0x02 != 0 {true} else {false};
-        self.c = if status_byte & 0x01 != 0 {true} else {false};
     }
 }
 
@@ -892,7 +895,7 @@ impl Cpu {
     fn inst_plp(&mut self)
     {
         let status = self.pop_word();
-        self.regs.status.load_byte(status);
+        self.regs.status = Status::from_byte(status);
     }
 
     /// ROL - Rotate Left
@@ -917,7 +920,7 @@ impl Cpu {
     fn inst_rti(&mut self)
     {
         let status_byte = self.pop_word();
-        self.regs.status.load_byte(status_byte);
+        self.regs.status = Status::from_byte(status_byte);
         let pc_l = self.pop_word();
         let pc_h = self.pop_word();
         self.regs.pc = (pc_h as u16) << 8 | pc_l as u16;
