@@ -927,10 +927,16 @@ impl Cpu {
     fn inst_sbc<A: Accessor>(&mut self, accessor: A)
     {
         let v = accessor.read(self);
-        let result = (self.regs.a as u16)
-            .wrapping_sub(v as u16)
-            .wrapping_sub(if !self.regs.status.c {1} else {0});
-        self.regs.status.c = (result & 0x100) == 0;
+        let carry_subtract = if self.regs.status.c {0} else {1};
+        let result = (self.regs.a)
+            .wrapping_sub(v)
+            .wrapping_sub(carry_subtract);
+        self.regs.status.c =
+            if v as u16 + carry_subtract as u16 > self.regs.a as u16 {
+                false
+            } else {
+                self.regs.status.c
+            };
         let a = self.regs.a;
         self.regs.status.v = (a ^ v) & 0x80 == 0x80 && (a^(result as u8)) & 0x80 == 0x80;
         self.set_a_update_zn(result as u8);
@@ -1590,11 +1596,11 @@ mod tests
         cpu.regs.a = 0x33;
         cpu.step();
         assert_eq!(0x22, cpu.regs.a);
-        assert_eq!(false, cpu.regs.status.c);
+        assert_eq!(true, cpu.regs.status.c);
         assert_eq!(false, cpu.regs.status.v);
         cpu.step();
-        assert_eq!(0x98, cpu.regs.a);
-        assert_eq!(true, cpu.regs.status.c);
+        assert_eq!(0x99, cpu.regs.a);
+        assert_eq!(false, cpu.regs.status.c);
         assert_eq!(true, cpu.regs.status.v);
         cpu.step();
         assert_eq!(0x7E, cpu.regs.a);
